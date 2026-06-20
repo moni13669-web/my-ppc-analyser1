@@ -82,13 +82,17 @@ def fetch_title(asin: str):
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
 
-    # Small random delay so requests don't fire in an obviously robotic
-    # fixed-interval pattern. Kept short to stay well inside Vercel's
-    # Hobby-tier 10s function timeout.
-    time.sleep(random.uniform(0.2, 0.6))
+    # Human-like variable delay instead of a fixed/uniform pause — real people
+    # don't click at perfectly even intervals. Most waits land on the shorter
+    # side (2-4s) with occasional longer pauses (up to ~7s), which is a more
+    # natural distribution than picking evenly between two numbers. Capped
+    # well under Vercel's Hobby-tier 10s function timeout, leaving headroom
+    # for the actual network request afterward.
+    delay = min(2.0 + random.expovariate(1 / 2.0), 7.0)
+    time.sleep(delay)
 
     try:
-        resp = requests.get(product_url, headers=headers, timeout=7)
+        resp = requests.get(product_url, headers=headers, timeout=2.5)
     except requests.RequestException:
         return {"success": False, "title": "No matching title found"}
 
