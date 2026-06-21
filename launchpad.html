@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPC Analyser — Launchpad</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --ink: #0b1320;
+    --ink-2: #111c2e;
+    --panel: #15233a;
+    --hairline: rgba(255,255,255,0.08);
+    --paper: #f4f1ea;
+    --gold: #e8a33d;
+    --gold-dim: #8a6a35;
+    --mint: #4fd1ae;
+    --red: #e8674a;
+    --ink-text: #e9edf3;
+    --dim-text: #8fa0b8;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html,body{
+    background: linear-gradient(180deg, var(--ink) 0%, var(--ink-2) 100%);
+    color: var(--ink-text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  a{ color: inherit; text-decoration:none; }
+  button{ font-family: inherit; }
+
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    padding: 22px 40px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    color: var(--dim-text);
+    text-transform: uppercase;
+  }
+  .brand-mark{
+    width:8px; height:8px; border-radius:2px;
+    background: var(--gold);
+    box-shadow: 0 0 12px rgba(232,163,61,0.7);
+  }
+  .user-area{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    font-size: 13.5px;
+    color: var(--dim-text);
+  }
+  .user-email{
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+  .logout-btn{
+    background: transparent;
+    border: 1px solid var(--hairline);
+    color: var(--dim-text);
+    padding: 7px 16px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .logout-btn:hover{ border-color: var(--gold-dim); color: var(--ink-text); }
+  .logout-btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  .stage{
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 64px 32px 80px;
+  }
+
+  .eyebrow{
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:22px; height:1px;
+    background: var(--gold-dim);
+  }
+
+  h1{
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.1;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+
+  .stage-sub{
+    font-size: 15.5px;
+    color: var(--dim-text);
+    margin-bottom: 44px;
+    max-width: 60ch;
+  }
+
+  .report-card{
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.03);
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+  .report-card-head{
+    display:flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .report-card-title{
+    font-family: var(--font-display);
+    font-size: 21px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .report-card-date{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--dim-text);
+    margin-top: 4px;
+  }
+  .freshness-tag{
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    padding: 5px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .freshness-fresh{ background: rgba(79,209,174,0.14); color: var(--mint); }
+  .freshness-stale{ background: rgba(232,103,74,0.13); color: var(--red); }
+
+  .stat-row{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat{
+    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat-label{
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--dim-text);
+    margin-bottom: 6px;
+  }
+  .stat-value{
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink-text);
+  }
+  .stat-value.good{ color: var(--mint); }
+  .stat-value.bad{ color: var(--red); }
+
+  .card-actions{
+    display:flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btn{
+    padding: 12px 22px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: transform .1s, background .15s, border-color .15s;
+  }
+  .btn:active{ transform: scale(0.98); }
+  .btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  .btn-gold{
+    background: linear-gradient(100deg, var(--gold), #d4892f);
+    color: #1c1306;
+  }
+  .btn-gold:hover{ filter: brightness(1.08); }
+  .btn-ghost{
+    background: transparent;
+    border: 1px solid var(--hairline);
+    color: var(--ink-text);
+  }
+  .btn-ghost:hover{ border-color: var(--gold-dim); }
+
+  .empty-state{
+    border: 1px dashed var(--hairline);
+    border-radius: 16px;
+    padding: 56px 32px;
+    text-align: center;
+  }
+  .empty-icon{
+    width: 46px; height: 46px;
+    margin: 0 auto 20px;
+    opacity: 0.5;
+  }
+  .empty-title{
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .empty-sub{
+    font-size: 14px;
+    color: var(--dim-text);
+    margin-bottom: 26px;
+    max-width: 42ch;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .loading-stage{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height: 60vh;
+    color: var(--dim-text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+
+  @media (max-width: 640px){
+    .topbar{ padding: 16px 20px; }
+    .stage{ padding: 40px 18px 60px; }
+    .stat-row{ grid-template-columns: repeat(2, 1fr); }
+    .report-card{ padding: 22px; }
+    .user-email{ display:none; }
+    .card-actions{ flex-direction: column; }
+    .card-actions .btn{ width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="brand-mark"></span>
+    PPC Analyser
+  </div>
+  <div class="user-area">
+    <span class="user-email" id="userEmail"></span>
+    <button class="logout-btn" id="logoutBtn">Log out</button>
+  </div>
+</div>
+
+<div id="loadingStage" class="loading-stage">Loading your workspace…</div>
+
+<div class="stage" id="stage" style="display:none;">
+  <div class="eyebrow">Launchpad</div>
+  <h1 id="greeting">Welcome back</h1>
+  <p class="stage-sub">Pick up where you left off, or upload a fresh report to analyse.</p>
+
+  <div id="reportArea"></div>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ymqlrqmldeqsswszyffe.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltcWxycW1sZGVxc3N3c3p5ZmZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5ODUzNzcsImV4cCI6MjA5NzU2MTM3N30._3NMYi_CKIbhamGzcIVyiQOFuUvbyPFvGf6fWVhpzeY";
+
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+    document.body.innerHTML = '<div style="padding:48px;font-family:sans-serif;">Couldn\'t load required scripts. Please refresh.</div>';
+    throw new Error('Supabase JS library failed to load.');
+  }
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const REPORT_FRESH_DAYS = 7;
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function formatDate(iso){
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) +
+      ' at ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function daysAgo(iso){
+    const then = new Date(iso).getTime();
+    const now = Date.now();
+    return Math.floor((now - then) / (1000 * 60 * 60 * 24));
+  }
+
+  function renderEmptyState(){
+    document.getElementById('reportArea').innerHTML = `
+      <div class="empty-state">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="#8fa0b8" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="9" y1="13" x2="15" y2="13"></line>
+          <line x1="9" y1="17" x2="15" y2="17"></line>
+        </svg>
+        <div class="empty-title">No report yet</div>
+        <p class="empty-sub">Upload your Sponsored Products report to see ACOS, ROAS and spend broken down by campaign, search term and product.</p>
+        <a href="/dashboard.html"><button class="btn btn-gold">Upload your first report</button></a>
+      </div>
+    `;
+  }
+
+  function formatNumber(num){
+    if (num >= 10000000) return (num / 10000000).toFixed(1) + 'Cr';
+    if (num >= 100000) return (num / 100000).toFixed(1) + 'L';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return Number(num).toFixed(0);
+  }
+
+  function renderReportCard(row){
+    const uploadedAt = row.uploaded_at;
+    const stale = daysAgo(uploadedAt) > REPORT_FRESH_DAYS;
+    const totals = (row.report_data && row.report_data.totals) || {};
+
+    const spend = totals.spend != null ? formatNumber(totals.spend) : '—';
+    const sales = totals.sales != null ? formatNumber(totals.sales) : (totals.gmvBaseline != null ? formatNumber(totals.gmvBaseline) : '—');
+    const acos = totals.acos != null ? totals.acos.toFixed(1) + '%' : '—';
+    const roas = totals.roas != null ? totals.roas.toFixed(2) + 'x' : '—';
+
+    document.getElementById('reportArea').innerHTML = `
+      <div class="report-card">
+        <div class="report-card-head">
+          <div>
+            <div class="report-card-title">Your last report</div>
+            <div class="report-card-date">Uploaded ${escapeHtml(formatDate(uploadedAt))}</div>
+          </div>
+          <span class="freshness-tag ${stale ? 'freshness-stale' : 'freshness-fresh'}">
+            ${stale ? 'Data may be stale' : 'Recently updated'}
+          </span>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="stat-label">Spend</div><div class="stat-value">${spend}</div></div>
+          <div class="stat"><div class="stat-label">Ad Sales</div><div class="stat-value">${sales}</div></div>
+          <div class="stat"><div class="stat-label">ACOS</div><div class="stat-value ${parseFloat(acos) > 35 ? 'bad' : ''}">${acos}</div></div>
+          <div class="stat"><div class="stat-label">ROAS</div><div class="stat-value ${parseFloat(roas) > 2 ? 'good' : ''}">${roas}</div></div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-gold" id="openReportBtn">Open this report</button>
+          <button class="btn btn-ghost" id="uploadNewBtn">Upload a new report</button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('openReportBtn').addEventListener('click', () => {
+      sessionStorage.setItem('ppc_reopen_report', JSON.stringify(row.report_data));
+      window.location.href = '/dashboard.html?reopen=1';
+    });
+
+    document.getElementById('uploadNewBtn').addEventListener('click', () => {
+      const proceed = confirm('Uploading a new report will replace your saved one. Continue?');
+      if (proceed) window.location.href = '/dashboard.html';
+    });
+  }
+
+  async function init(){
+    const { data: sessionData } = await sb.auth.getSession();
+    if (!sessionData || !sessionData.session) {
+      window.location.href = '/index.html';
+      return;
+    }
+    const user = sessionData.session.user;
+    document.getElementById('userEmail').textContent = user.email || '';
+    const firstName = (user.email || '').split('@')[0];
+    document.getElementById('greeting').textContent = `Welcome back, ${firstName}`;
+
+    const { data: reportRow, error } = await sb
+      .from('user_reports')
+      .select('report_data, uploaded_at')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    document.getElementById('loadingStage').style.display = 'none';
+    document.getElementById('stage').style.display = 'block';
+
+    if (error) {
+      console.error('Failed to load saved report:', error.message);
+      renderEmptyState();
+      return;
+    }
+
+    if (reportRow && reportRow.report_data) {
+      renderReportCard(reportRow);
+    } else {
+      renderEmptyState();
+    }
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    window.location.href = '/index.html';
+  });
+
+  init();
+</script>
+
+</body>
+</html>
