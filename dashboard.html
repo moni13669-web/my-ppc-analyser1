@@ -89,6 +89,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 14px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
         }
 
         .header-title {
@@ -109,73 +116,128 @@
             gap: 16px;
         }
 
-        .menu-wrap {
-            position: relative;
-        }
-
-        .menu-dots-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 9px;
+        .hamburger-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
             border: 1px solid var(--glass-border);
-            background: rgba(255,255,255,0.5);
+            background: var(--glass-hi);
+            backdrop-filter: blur(10px);
             color: var(--text-dark);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: background 0.15s, border-color 0.15s;
+            transition: background 0.15s, border-color 0.15s, transform 0.15s;
+            margin-right: 4px;
         }
-        .menu-dots-btn:hover {
+        .hamburger-btn:hover {
             background: rgba(255,255,255,0.85);
             border-color: var(--accent);
         }
-        .menu-dots-btn:focus-visible {
+        .hamburger-btn:active { transform: scale(0.95); }
+        .hamburger-btn:focus-visible {
             outline: 2px solid var(--accent);
             outline-offset: 2px;
         }
 
-        .menu-dropdown {
-            position: absolute;
-            top: calc(100% + 8px);
-            right: 0;
-            min-width: 200px;
-            background: #fff;
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            box-shadow: 0 16px 40px -16px rgba(11, 43, 38, 0.35);
-            padding: 6px;
-            display: none;
-            z-index: 50;
+        /* ---------------- Left slide-out drawer ---------------- */
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 43, 38, 0.35);
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 90;
         }
-        .menu-dropdown.show {
-            display: block;
+        .drawer-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
         }
 
-        .menu-item {
-            display: block;
+        .side-drawer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            max-width: 84vw;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(28px) saturate(180%);
+            -webkit-backdrop-filter: blur(28px) saturate(180%);
+            border-right: 1px solid var(--glass-border);
+            box-shadow: 24px 0 60px -30px rgba(11, 43, 38, 0.4);
+            z-index: 95;
+            transform: translateX(-100%);
+            transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+            display: flex;
+            flex-direction: column;
+            padding: 22px 16px;
+        }
+        .side-drawer.open {
+            transform: translateX(0);
+        }
+
+        .drawer-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px 18px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 14px;
+        }
+        .drawer-brand {
+            font-family: var(--font-display, inherit);
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text-dark);
+        }
+        .drawer-close {
+            background: transparent;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            line-height: 0;
+        }
+        .drawer-close:hover { color: var(--text-dark); }
+
+        .drawer-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
             width: 100%;
             text-align: left;
             background: transparent;
             border: none;
-            padding: 10px 12px;
-            border-radius: 8px;
-            font-size: 13.5px;
+            padding: 12px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
             font-family: inherit;
             color: var(--text-dark);
             cursor: pointer;
             transition: background 0.15s;
         }
-        .menu-item:hover {
-            background: rgba(28, 78, 156, 0.08);
+        .drawer-item svg { flex-shrink: 0; opacity: 0.75; }
+        .drawer-item:hover {
+            background: rgba(28, 78, 156, 0.1);
         }
-        .menu-item-muted {
+        .drawer-item-muted {
             color: var(--text-light);
         }
-        .menu-divider {
+        .drawer-divider {
             height: 1px;
             background: var(--border-color);
-            margin: 6px 4px;
+            margin: 10px 8px;
         }
 
         /* ---------------- Modal system (About / How to use / Feedback) ---------------- */
@@ -194,14 +256,17 @@
             display: flex;
         }
         .modal-box {
-            background: #fff;
-            border-radius: 20px;
+            background: var(--glass-hi);
+            backdrop-filter: blur(28px) saturate(180%);
+            -webkit-backdrop-filter: blur(28px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
             max-width: 520px;
             width: 100%;
             max-height: 85vh;
             overflow-y: auto;
             padding: 32px;
-            box-shadow: 0 40px 80px -30px rgba(11, 43, 38, 0.45);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 40px 80px -30px rgba(11, 43, 38, 0.45);
         }
         .modal-header {
             display: flex;
@@ -245,8 +310,9 @@
         .feedback-textarea {
             width: 100%;
             min-height: 130px;
+            background: rgba(255,255,255,0.55);
             border: 1px solid var(--glass-border);
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 12px 14px;
             font-family: inherit;
             font-size: 13.5px;
@@ -1160,7 +1226,7 @@
             .header-location { display: none; }
             .modal-box { padding: 22px; max-height: 90vh; }
             .modal-title { font-size: 17px; }
-            .menu-dropdown { min-width: 180px; }
+            .side-drawer { width: 250px; }
         }
     </style>
     <style>
@@ -1542,23 +1608,45 @@
     <div class="container">
         <div class="main">
             <div class="header">
-                <div class="header-title">PPC Analytics</div>
-                <div class="header-right">
-                    <div class="header-location">India</div>
-                    <div class="menu-wrap">
-                        <button class="menu-dots-btn" id="menuDotsBtn" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1.2"></circle><circle cx="12" cy="12" r="1.2"></circle><circle cx="12" cy="19" r="1.2"></circle></svg>
-                        </button>
-                        <div class="menu-dropdown" id="menuDropdown">
-                            <button class="menu-item" id="menuAboutBtn">About this product</button>
-                            <button class="menu-item" id="menuHowToBtn">How to use</button>
-                            <button class="menu-item" id="menuFeedbackBtn">Send feedback</button>
-                            <div class="menu-divider"></div>
-                            <button class="menu-item menu-item-muted" id="menuLogoutBtn">Log out</button>
-                        </div>
-                    </div>
+                <div class="header-left">
+                    <button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-haspopup="true" aria-expanded="false">
+                        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
+                    </button>
+                    <div class="header-title">PPC Analytics</div>
                 </div>
+                <div class="header-location">India</div>
             </div>
+
+            <!-- ===== Left slide-out drawer ===== -->
+            <div class="drawer-overlay" id="drawerOverlay"></div>
+            <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
+                <div class="drawer-head">
+                    <span class="drawer-brand">PPC Analyser</span>
+                    <button class="drawer-close" id="drawerCloseBtn" aria-label="Close menu">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <nav class="drawer-nav">
+                    <button class="drawer-item" id="menuAboutBtn">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        About this product
+                    </button>
+                    <button class="drawer-item" id="menuHowToBtn">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        How to use
+                    </button>
+                    <button class="drawer-item" id="menuFeedbackBtn">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                        Send feedback
+                    </button>
+                    <div class="drawer-divider"></div>
+                    <button class="drawer-item drawer-item-muted" id="menuLogoutBtn">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        Log out
+                    </button>
+                </nav>
+            </aside>
+
 
             <!-- ===== About modal ===== -->
             <div class="modal-overlay" id="aboutModal">
@@ -1970,7 +2058,7 @@
         // Runs before anything else: confirms the visitor is logged in, and if
         // a saved report was handed off from the launchpad ("Open this report"),
         // loads it straight into the dashboard instead of showing the upload step.
-            async function initAuthAndMaybeReopen() {
+        async function initAuthAndMaybeReopen() {
             const { data: sessionData } = await sb.auth.getSession();
             if (!sessionData || !sessionData.session) {
                 window.location.href = '/index.html';
@@ -2015,31 +2103,42 @@
 
         initAuthAndMaybeReopen();
 
-        // ---------------- Three-dot menu + modals ----------------
-        const menuDotsBtn = document.getElementById('menuDotsBtn');
-        const menuDropdown = document.getElementById('menuDropdown');
+        // ---------------- Left slide-out drawer + modals ----------------
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const sideDrawer = document.getElementById('sideDrawer');
+        const drawerOverlay = document.getElementById('drawerOverlay');
+        const drawerCloseBtn = document.getElementById('drawerCloseBtn');
 
-        menuDotsBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const isOpen = menuDropdown.classList.toggle('show');
-            menuDotsBtn.setAttribute('aria-expanded', isOpen);
-        });
-        document.addEventListener('click', () => {
-            menuDropdown.classList.remove('show');
-            menuDotsBtn.setAttribute('aria-expanded', 'false');
+        function openDrawer() {
+            sideDrawer.classList.add('open');
+            drawerOverlay.classList.add('show');
+            sideDrawer.setAttribute('aria-hidden', 'false');
+            hamburgerBtn.setAttribute('aria-expanded', 'true');
+        }
+        function closeDrawer() {
+            sideDrawer.classList.remove('open');
+            drawerOverlay.classList.remove('show');
+            sideDrawer.setAttribute('aria-hidden', 'true');
+            hamburgerBtn.setAttribute('aria-expanded', 'false');
+        }
+
+        hamburgerBtn.addEventListener('click', openDrawer);
+        drawerCloseBtn.addEventListener('click', closeDrawer);
+        drawerOverlay.addEventListener('click', closeDrawer);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeDrawer();
         });
 
         function openModal(id) {
             document.getElementById(id).classList.add('show');
         }
-        function closeMenuDropdown() {
-    menuDropdown.classList.remove('show');
-    menuDotsBtn.setAttribute('aria-expanded', 'false');
-}
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
 
-document.getElementById('menuAboutBtn').addEventListener('click', () => { closeMenuDropdown(); openModal('aboutModal'); });
-document.getElementById('menuHowToBtn').addEventListener('click', () => { closeMenuDropdown(); openModal('howToModal'); });
-document.getElementById('menuFeedbackBtn').addEventListener('click', () => { closeMenuDropdown(); openModal('feedbackModal'); });
+        document.getElementById('menuAboutBtn').addEventListener('click', () => { closeDrawer(); openModal('aboutModal'); });
+        document.getElementById('menuHowToBtn').addEventListener('click', () => { closeDrawer(); openModal('howToModal'); });
+        document.getElementById('menuFeedbackBtn').addEventListener('click', () => { closeDrawer(); openModal('feedbackModal'); });
         document.getElementById('menuLogoutBtn').addEventListener('click', async () => {
             await sb.auth.signOut();
             window.location.href = '/index.html';
