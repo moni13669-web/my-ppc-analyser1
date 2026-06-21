@@ -1,0 +1,2504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon PPC Analyser</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        :root {
+            --primary: #000;
+            --secondary: rgba(255, 255, 255, 0.5);
+            --accent: #1C4E9C;
+            --success: #34c759;
+            --danger: #ff3b30;
+            --warning: #ff9500;
+            --light-bg: transparent;
+            --border-color: rgba(255, 255, 255, 0.4);
+            --text-dark: #0B2B26;
+            --text-light: #4B635E;
+            --glass-hi: rgba(255, 255, 255, 0.62);
+            --glass-mid: rgba(255, 255, 255, 0.4);
+            --glass-lo: rgba(255, 255, 255, 0.22);
+            --glass-border: rgba(255, 255, 255, 0.55);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--light-bg);
+            color: var(--text-dark);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #dashboardView {
+            position: relative;
+            min-height: 100vh;
+            background: linear-gradient(160deg, #EAF7F1 0%, #E3EEFC 55%, #EAF3FF 100%);
+        }
+
+        #dashboardView .dash-blobs {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        #dashboardView .dash-blobs .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.5; }
+        #dashboardView .dash-blobs .blob-a { width: 420px; height: 420px; background: #BFEEE2; top: -160px; left: -120px; animation: drift1 30s ease-in-out infinite alternate; }
+        #dashboardView .dash-blobs .blob-b { width: 460px; height: 460px; background: #CFE0FB; bottom: -180px; right: -140px; animation: drift2 34s ease-in-out infinite alternate; }
+        #dashboardView .dash-blobs .blob-c { width: 280px; height: 280px; background: #FFE3C9; top: 30%; right: 10%; opacity: 0.32; animation: drift1 24s ease-in-out infinite alternate-reverse; }
+
+        @keyframes drift1 { from { transform: translate(0, 0); } to { transform: translate(40px, 30px); } }
+        @keyframes drift2 { from { transform: translate(0, 0); } to { transform: translate(-30px, -40px); } }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            height: 100vh;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-bottom: 1px solid var(--glass-border);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.7) inset, 0 12px 30px -22px rgba(11, 43, 38, 0.25);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-family: var(--font-display, inherit);
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+        }
+
+        .header-location {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 32px;
+        }
+
+        .upload-section {
+            position: relative;
+            overflow: hidden;
+            background: var(--glass-mid);
+            backdrop-filter: blur(28px) saturate(180%);
+            -webkit-backdrop-filter: blur(28px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            padding: 44px;
+            margin-bottom: 32px;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 24px 60px -34px rgba(11, 43, 38, 0.35);
+        }
+
+        .upload-section::before {
+            content: '';
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(15, 122, 110, 0.18), transparent 70%);
+            top: -140px;
+            right: -100px;
+            pointer-events: none;
+        }
+
+        .upload-grid {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .upload-area {
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 32px 28px;
+            text-align: center;
+            cursor: default;
+            transition: all 0.25s ease;
+            background: var(--glass-hi);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset;
+        }
+
+        .upload-area:hover {
+            border-color: var(--teal, var(--accent));
+            background: rgba(255, 255, 255, 0.78);
+            transform: translateY(-3px);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 20px 34px -16px rgba(15, 122, 110, 0.35);
+        }
+
+        .upload-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        .upload-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--teal, #0F7A6E), var(--blue, #1C4E9C));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            box-shadow: 0 10px 18px -8px rgba(15, 80, 90, 0.45);
+        }
+
+        .upload-icon svg { width: 22px; height: 22px; }
+
+        .upload-area h3 {
+            font-family: var(--font-display, inherit);
+            color: var(--text-dark);
+            margin-bottom: 4px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+        }
+
+        .upload-area p {
+            color: var(--text-light);
+            margin-bottom: 18px;
+            font-size: 12.5px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(100deg, var(--teal, #0F7A6E), var(--blue, #1C4E9C));
+            color: white;
+            border: none;
+            padding: 9px 20px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 10px 18px -10px rgba(15, 80, 90, 0.45);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 22px -10px rgba(15, 80, 90, 0.55);
+        }
+
+        .upload-btn.analyze {
+            padding: 13px 34px;
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .upload-btn.analyze svg { width: 18px; height: 18px; }
+
+        .upload-btn.analyze:hover {
+            transform: translateY(-2px);
+        }
+
+        .file-name {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            background: rgba(52, 199, 89, 0.13);
+            color: #1c7a3f;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 11.5px;
+        }
+
+        .file-name:empty {
+            display: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 56px 20px;
+            background: var(--glass-mid);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .upload-intro {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        .upload-instruction {
+            margin: 0;
+            font-size: 13.5px;
+            color: var(--text-light);
+        }
+
+        .loader-live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #1C4E9C;
+            box-shadow: 0 0 0 0 rgba(28, 78, 156, 0.45);
+            animation: liveDotPulse 1.4s ease-out infinite;
+        }
+
+        @keyframes liveDotPulse {
+            0% { box-shadow: 0 0 0 0 rgba(28, 78, 156, 0.45); }
+            70% { box-shadow: 0 0 0 7px rgba(28, 78, 156, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(28, 78, 156, 0); }
+        }
+
+        .loader-chart {
+            width: 220px;
+            height: 70px;
+            display: block;
+            margin: 0 auto 18px;
+            overflow: hidden;
+        }
+
+        .loader-track {
+            animation: loaderScroll 3s linear infinite;
+        }
+
+        .loader-line {
+            fill: none;
+            stroke: url(#loaderGrad);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .loader-grid line {
+            stroke: rgba(11, 43, 38, 0.08);
+            stroke-width: 1;
+        }
+
+        @keyframes loaderScroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-220px); }
+        }
+
+        .loader-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-family: var(--font-mono, monospace);
+            font-size: 12.5px;
+            letter-spacing: 0.3px;
+            color: var(--text-light);
+        }
+
+        .loader-dots span {
+            opacity: 0.2;
+            animation: loaderDots 1.2s ease-in-out infinite;
+        }
+
+        .loader-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loader-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes loaderDots {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard.show {
+            display: block;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 18px;
+            letter-spacing: -0.5px;
+        }
+
+        .section {
+            position: relative;
+            background: var(--glass-mid);
+            backdrop-filter: blur(26px) saturate(180%);
+            -webkit-backdrop-filter: blur(26px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.75) inset, 0 24px 50px -32px rgba(11, 43, 38, 0.3);
+        }
+
+        .section-title {
+            font-family: var(--font-display, inherit);
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+            letter-spacing: -0.2px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .daterange-bar {
+            background: var(--glass-hi);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 16px 32px -22px rgba(11, 43, 38, 0.28);
+        }
+
+        .daterange-bar .filter-group input[type="date"] {
+            min-width: 150px;
+        }
+
+        .daterange-quick {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dark);
+            padding: 8px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+
+        .quick-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .quick-btn.active {
+            background: linear-gradient(100deg, var(--teal, #0F7A6E), var(--blue, #1C4E9C));
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 10px 20px -10px rgba(15, 80, 90, 0.5);
+        }
+
+        .daterange-hint {
+            font-size: 11px;
+            color: var(--text-light);
+            width: 100%;
+        }
+
+        .kpi-card {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 18px 18px;
+            border-radius: 18px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-hi);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 14px 28px -20px rgba(11, 43, 38, 0.22);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 18px 32px -16px rgba(11, 43, 38, 0.28);
+        }
+
+        .kpi-card.kpi-hero {
+            background: linear-gradient(135deg, rgba(15, 122, 110, 0.16), rgba(28, 78, 156, 0.14));
+            border: 1px solid rgba(15, 122, 110, 0.35);
+        }
+
+        .kpi-card.kpi-hero::after {
+            content: '';
+            position: absolute;
+            top: -40%;
+            right: -20%;
+            width: 140px;
+            height: 140px;
+            background: radial-gradient(circle, rgba(255,255,255,0.55), transparent 70%);
+            pointer-events: none;
+        }
+
+        .kpi-icon {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 16px -8px rgba(11, 43, 38, 0.35);
+        }
+
+        .kpi-icon svg { width: 18px; height: 18px; }
+
+        .kpi-card.kpi-roas .kpi-icon { background: linear-gradient(135deg, #0071e3, #1C4E9C); }
+        .kpi-card.kpi-cost .kpi-icon { background: linear-gradient(135deg, #34c759, #0F7A6E); }
+        .kpi-card.kpi-sales .kpi-icon { background: linear-gradient(135deg, #0F7A6E, #1C4E9C); }
+        .kpi-card.kpi-acos .kpi-icon { background: linear-gradient(135deg, #ff9500, #c97200); }
+        .kpi-card.kpi-impressions .kpi-icon { background: linear-gradient(135deg, #0F7A6E, #1C4E9C); }
+
+        .kpi-body {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .kpi-label {
+            color: var(--text-light);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .kpi-value {
+            font-family: var(--font-mono, inherit);
+            font-size: 23px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-dark);
+        }
+
+        .kpi-sub {
+            font-size: 10.5px;
+            color: var(--text-light);
+            margin-top: 1px;
+        }
+
+        .kpi-unit {
+            font-size: 16px;
+            color: var(--text-light);
+            margin-left: 3px;
+            font-weight: 600;
+        }
+
+        .chart-controls {
+            margin-bottom: 16px;
+            padding: 10px 0;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-light);
+            text-transform: uppercase;
+        }
+
+        .metric-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .metric-checkbox input {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+        }
+
+        .metric-checkbox span {
+            position: relative;
+            padding-left: 14px;
+        }
+
+        .metric-checkbox span::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .metric-roas span { color: #0071e3; font-weight: 600; }
+        .metric-roas span::before { background: #0071e3; box-shadow: 0 0 6px rgba(0, 113, 227, 0.5); }
+        .metric-roas input { accent-color: #0071e3; }
+
+        .metric-acos span { color: #ff9500; font-weight: 600; }
+        .metric-acos span::before { background: #ff9500; box-shadow: 0 0 6px rgba(255, 149, 0, 0.5); }
+        .metric-acos input { accent-color: #ff9500; }
+
+        .metric-spend span { color: #34c759; font-weight: 600; }
+        .metric-spend span::before { background: #34c759; box-shadow: 0 0 6px rgba(52, 199, 89, 0.5); }
+        .metric-spend input { accent-color: #34c759; }
+
+        .metric-sales span { color: #ff3b30; font-weight: 600; }
+        .metric-sales span::before { background: #ff3b30; box-shadow: 0 0 6px rgba(255, 59, 48, 0.5); }
+        .metric-sales input { accent-color: #ff3b30; }
+
+        .chart-area {
+            height: clamp(200px, 34vh, 300px);
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--glass-hi);
+            backdrop-filter: blur(18px) saturate(180%);
+            -webkit-backdrop-filter: blur(18px) saturate(180%);
+            margin-bottom: 28px;
+            border-radius: 18px 18px 0 0;
+            padding: 4px 4px 0;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 14px 28px -22px rgba(11, 43, 38, 0.28);
+        }
+
+        .tab-btn {
+            position: relative;
+            padding: 14px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text-light);
+            font-size: 13px;
+            border-bottom: 2px solid transparent;
+            transition: 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--blue, var(--accent));
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: 2px;
+            background: linear-gradient(100deg, var(--teal, var(--accent)), var(--blue, var(--accent)));
+            border-radius: 2px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .filter-section {
+            background: var(--glass-hi);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 16px 32px -22px rgba(11, 43, 38, 0.26);
+            width: fit-content;
+            max-width: 100%;
+        }
+
+        .filter-label {
+            width: 100%;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            font-size: 11px;
+            color: var(--text-light);
+            text-transform: uppercase;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            font-size: 13px;
+            font-family: inherit;
+            min-width: 140px;
+            background: rgba(255, 255, 255, 0.65);
+            color: var(--text-dark);
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(28, 78, 156, 0.12);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .filter-btn {
+            background: linear-gradient(100deg, var(--teal, #0F7A6E), var(--blue, #1C4E9C));
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: 0.2s;
+            box-shadow: 0 10px 18px -10px rgba(15, 80, 90, 0.45);
+        }
+
+        .filter-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 22px -10px rgba(15, 80, 90, 0.55);
+        }
+
+        .summary {
+            background: var(--glass-hi);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 18px;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 16px 32px -22px rgba(11, 43, 38, 0.26);
+        }
+
+        .summary-item {
+            text-align: left;
+        }
+
+        .summary-label {
+            font-size: 10px;
+            color: var(--text-light);
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .summary-value {
+            font-family: var(--font-mono, inherit);
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+            color: var(--text-dark);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 480px;
+            border-radius: 12px;
+        }
+
+        .table-wrapper::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-track {
+            background: rgba(11, 43, 38, 0.05);
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(15, 122, 110, 0.35);
+            border-radius: 999px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: rgba(15, 122, 110, 0.55);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .data-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--text-dark);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 11px;
+            text-transform: uppercase;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(14px) saturate(180%);
+            -webkit-backdrop-filter: blur(14px) saturate(180%);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table tr:hover {
+            background: var(--secondary);
+        }
+
+        .data-table tr.subtotal {
+            background: var(--secondary);
+            font-weight: 600;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .status.good { background: #d1fae5; color: #065f46; }
+        .status.scale { background: #d1fae5; color: #065f46; }
+        .status.maintain { background: #dbeafe; color: #1e40af; }
+        .status.reduce { background: #fed7aa; color: #92400e; }
+        .status.pause { background: #fee2e2; color: #991b1b; }
+        .status.review { background: #fed7aa; color: #92400e; }
+
+        .data-table tr.row-scale { background: linear-gradient(90deg, rgba(52, 199, 89, 0.16), rgba(52, 199, 89, 0.02) 65%); }
+        .data-table tr.row-maintain { background: linear-gradient(90deg, rgba(0, 113, 227, 0.13), rgba(0, 113, 227, 0.02) 65%); }
+        .data-table tr.row-reduce { background: linear-gradient(90deg, rgba(255, 149, 0, 0.16), rgba(255, 149, 0, 0.02) 65%); }
+        .data-table tr.row-pause { background: linear-gradient(90deg, rgba(255, 59, 48, 0.15), rgba(255, 59, 48, 0.02) 65%); }
+        .data-table tr.row-good { background: linear-gradient(90deg, rgba(52, 199, 89, 0.16), rgba(52, 199, 89, 0.02) 65%); }
+        .data-table tr.row-review { background: linear-gradient(90deg, rgba(255, 149, 0, 0.16), rgba(255, 149, 0, 0.02) 65%); }
+
+        .data-table tr.row-scale:hover { background: linear-gradient(90deg, rgba(52, 199, 89, 0.24), rgba(52, 199, 89, 0.05) 65%); }
+        .data-table tr.row-maintain:hover { background: linear-gradient(90deg, rgba(0, 113, 227, 0.2), rgba(0, 113, 227, 0.05) 65%); }
+        .data-table tr.row-reduce:hover { background: linear-gradient(90deg, rgba(255, 149, 0, 0.24), rgba(255, 149, 0, 0.05) 65%); }
+        .data-table tr.row-pause:hover { background: linear-gradient(90deg, rgba(255, 59, 48, 0.22), rgba(255, 59, 48, 0.05) 65%); }
+        .data-table tr.row-good:hover { background: linear-gradient(90deg, rgba(52, 199, 89, 0.24), rgba(52, 199, 89, 0.05) 65%); }
+        .data-table tr.row-review:hover { background: linear-gradient(90deg, rgba(255, 149, 0, 0.24), rgba(255, 149, 0, 0.05) 65%); }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            padding: 28px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(100deg, var(--teal, #0F7A6E), var(--blue, #1C4E9C));
+            color: white;
+            box-shadow: 0 10px 20px -10px rgba(15, 80, 90, 0.5);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 24px -10px rgba(15, 80, 90, 0.6);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(10px);
+            color: var(--accent);
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            display: none;
+            font-size: 13px;
+            backdrop-filter: blur(10px);
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: rgba(52, 199, 89, 0.16);
+            color: #065f46;
+            border-left: 3px solid #10b981;
+        }
+
+        .message.error {
+            background: rgba(255, 59, 48, 0.13);
+            color: #991b1b;
+            border-left: 3px solid #dc2626;
+        }
+
+        .title-fetch-banner {
+            background: var(--glass-hi);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 14px 28px -22px rgba(11, 43, 38, 0.26);
+        }
+
+        .title-fetch-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12.5px;
+            color: var(--text-dark);
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .title-fetch-spinner {
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            border: 2px solid rgba(15, 122, 110, 0.25);
+            border-top-color: var(--teal, #0F7A6E);
+            animation: titleSpin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes titleSpin { to { transform: rotate(360deg); } }
+
+        .title-fetch-track {
+            height: 5px;
+            border-radius: 999px;
+            background: rgba(11, 43, 38, 0.08);
+            overflow: hidden;
+        }
+
+        .title-fetch-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(100deg, var(--teal, #0F7A6E), var(--blue, #1C4E9C));
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 1024px) {
+            .upload-grid { grid-template-columns: 1fr; }
+            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+            .summary { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .content { padding: 20px; }
+            .kpi-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+    <style>
+
+    :root {
+        --bg-1: #EAF7F1;
+        --bg-2: #E3EEFC;
+        --ink: #0B2B26;
+        --ink-soft: #4B635E;
+        --surface: rgba(255, 255, 255, 0.86);
+        --stage: rgba(255, 255, 255, 0.4);
+        --border: rgba(11, 43, 38, 0.1);
+        --teal: #0F7A6E;
+        --blue: #1C4E9C;
+        --amber: #FF8A3D;
+        --font-display: 'Space Grotesk', sans-serif;
+        --font-body: 'Inter', sans-serif;
+        --font-mono: 'IBM Plex Mono', monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    #launchpadView {
+        margin: 0;
+        min-height: 100vh;
+        background: linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 100%);
+        font-family: var(--font-body);
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        overflow-x: hidden;
+    }
+
+    .blobs {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        overflow: hidden;
+    }
+
+    .blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(70px);
+        opacity: 0.55;
+    }
+
+    .blob-1 { width: 380px; height: 380px; background: #BFEEE2; top: -120px; left: -100px; animation: drift1 26s ease-in-out infinite alternate; }
+    .blob-2 { width: 420px; height: 420px; background: #CFE0FB; bottom: -160px; right: -120px; animation: drift2 32s ease-in-out infinite alternate; }
+    .blob-3 { width: 260px; height: 260px; background: #FFE3C9; bottom: 10%; left: 6%; opacity: 0.4; animation: drift1 22s ease-in-out infinite alternate-reverse; }
+
+    @keyframes drift1 { from { transform: translate(0, 0); } to { transform: translate(40px, 30px); } }
+    @keyframes drift2 { from { transform: translate(0, 0); } to { transform: translate(-30px, -40px); } }
+
+    .stage {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 1100px;
+        background: var(--stage);
+        backdrop-filter: blur(30px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: 32px;
+        box-shadow: 0 40px 80px -40px rgba(11, 43, 38, 0.25);
+        padding: 56px;
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 48px;
+        align-items: center;
+    }
+
+    /* ---------- Left: live preview mockup ---------- */
+
+    .preview-pane {
+        display: flex;
+        justify-content: center;
+    }
+
+    .preview-stack {
+        position: relative;
+        width: 100%;
+        max-width: 440px;
+        opacity: 0;
+        animation: rise 0.7s 0.1s ease-out forwards;
+    }
+
+    .preview-card-back {
+        position: absolute;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: 24px;
+        transform: translate(16px, 18px) rotate(-2deg);
+    }
+
+    .preview-card {
+        position: relative;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 26px;
+        box-shadow: 0 30px 60px -30px rgba(11, 43, 38, 0.3);
+    }
+
+    .preview-topbar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 22px;
+    }
+
+    .preview-topbar .dot { width: 9px; height: 9px; border-radius: 50%; }
+    .dot-1 { background: #FF6259; }
+    .dot-2 { background: #FFBD2E; }
+    .dot-3 { background: #28C840; }
+
+    .preview-brand {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.4px;
+        color: var(--ink-soft);
+    }
+
+    .preview-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    .pkpi {
+        background: rgba(11, 43, 38, 0.045);
+        border-radius: 14px;
+        padding: 10px 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .pkpi-label {
+        font-size: 9.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: var(--ink-soft);
+    }
+
+    .pkpi-value {
+        font-family: var(--font-mono);
+        font-weight: 600;
+        font-size: 16px;
+        color: var(--ink);
+    }
+
+    .pkpi-amber .pkpi-value { color: var(--amber); }
+
+    .preview-chart { width: 100%; height: 64px; display: block; margin-bottom: 18px; }
+
+    .chart-line {
+        fill: none;
+        stroke: url(#lineGrad);
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-dasharray: 480;
+        stroke-dashoffset: 480;
+        animation: drawline 1.4s 0.5s ease-out forwards;
+    }
+
+    .preview-rows { display: flex; flex-direction: column; }
+
+    .prow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 2px;
+        border-bottom: 1px solid var(--border);
+        font-size: 12.5px;
+    }
+
+    .prow:last-child { border-bottom: none; }
+
+    .tag {
+        font-size: 9.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 3px 9px;
+        border-radius: 999px;
+    }
+
+    .tag-scale { background: rgba(15, 122, 110, 0.13); color: var(--teal); }
+    .tag-maintain { background: rgba(28, 78, 156, 0.13); color: var(--blue); }
+    .tag-reduce { background: rgba(255, 138, 61, 0.18); color: #B15B1F; }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes drawline { to { stroke-dashoffset: 0; } }
+
+    /* ---------- Right: launch panel ---------- */
+
+    .panel {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        opacity: 0;
+        animation: rise 0.7s 0.25s ease-out forwards;
+    }
+
+    .eyebrow {
+        align-self: flex-start;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: var(--teal);
+        background: rgba(15, 122, 110, 0.08);
+        border: 1px solid rgba(15, 122, 110, 0.2);
+        padding: 7px 14px;
+        border-radius: 999px;
+    }
+
+    .wordmark {
+        font-family: var(--font-display);
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        line-height: 1.05;
+        font-size: 42px;
+        font-weight: 700;
+        letter-spacing: -1px;
+    }
+
+    .wordmark .grad {
+        background: linear-gradient(100deg, var(--teal), var(--blue));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .desc {
+        font-size: 15.5px;
+        line-height: 1.65;
+        color: var(--ink-soft);
+        max-width: 38ch;
+        margin: 0;
+    }
+
+    .cta {
+        align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-body);
+        font-weight: 600;
+        font-size: 15px;
+        color: #fff;
+        text-decoration: none;
+        background: linear-gradient(100deg, var(--teal), var(--blue));
+        padding: 14px 26px;
+        border-radius: 999px;
+        box-shadow: 0 16px 30px -10px rgba(15, 80, 90, 0.5);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .cta:hover { transform: translateY(-2px); box-shadow: 0 20px 36px -10px rgba(15, 80, 90, 0.6); }
+    .cta:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
+    .cta-arrow { width: 16px; height: 16px; transition: transform 0.2s ease; }
+    .cta:hover .cta-arrow { transform: translateX(3px); }
+
+    .cta-note { font-size: 12.5px; color: var(--ink-soft); margin: -4px 0 0; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+
+    .chip {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ink-soft);
+        background: rgba(255, 255, 255, 0.65);
+        border: 1px solid var(--border);
+        padding: 6px 12px;
+        border-radius: 999px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *, .preview-stack, .panel, .chart-line, .blob { animation: none !important; opacity: 1 !important; transform: none !important; }
+    }
+
+    @media (max-width: 860px) {
+        .stage { grid-template-columns: 1fr; padding: 36px 24px; gap: 40px; }
+        .panel, .preview-stack { max-width: 100%; }
+        .wordmark { font-size: 34px; }
+    }
+
+    </style>
+</head>
+<body>
+    <div id="launchpadView">
+        
+
+    <div class="blobs" aria-hidden="true">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="stage">
+        <section class="preview-pane">
+            <div class="preview-stack">
+                <div class="preview-card-back" aria-hidden="true"></div>
+                <div class="preview-card">
+                    <div class="preview-topbar">
+                        <span class="dot dot-1"></span>
+                        <span class="dot dot-2"></span>
+                        <span class="dot dot-3"></span>
+                        <span class="preview-brand">amazon-ppc-analyser</span>
+                    </div>
+
+                    <div class="preview-kpis">
+                        <div class="pkpi"><span class="pkpi-label">ROAS</span><span class="pkpi-value">3.4x</span></div>
+                        <div class="pkpi"><span class="pkpi-label">ACOS</span><span class="pkpi-value">28.6%</span></div>
+                        <div class="pkpi pkpi-amber"><span class="pkpi-label">Spend</span><span class="pkpi-value">4.2L</span></div>
+                        <div class="pkpi"><span class="pkpi-label">Sales</span><span class="pkpi-value">14.8L</span></div>
+                    </div>
+
+                    <svg class="preview-chart" viewBox="0 0 320 70" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stop-color="#0F7A6E" />
+                                <stop offset="100%" stop-color="#1C4E9C" />
+                            </linearGradient>
+                        </defs>
+                        <path class="chart-line" d="M0,55 C30,48 50,60 70,42 C95,20 120,38 150,26 C180,14 210,30 240,18 C270,6 300,22 320,10" />
+                    </svg>
+
+                    <div class="preview-rows">
+                        <div class="prow"><span>Winter Sale Campaign</span><span class="tag tag-scale">Scale</span></div>
+                        <div class="prow"><span>Brand Defense</span><span class="tag tag-maintain">Maintain</span></div>
+                        <div class="prow"><span>Generic Keywords</span><span class="tag tag-reduce">Reduce</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <span class="eyebrow">PPC Launchpad</span>
+            <h1 class="wordmark"><span>Amazon PPC</span><span class="grad">Analyser</span></h1>
+            <p class="desc">Upload your campaign, search term and product reports — read ROAS, ACOS, spend and impressions trends in one dashboard.</p>
+
+            <a class="cta" href="#" onclick="launchDashboard(); return false;">
+                Launch Amazon PPC Analyser
+                <svg class="cta-arrow" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="13 6 19 12 13 18"></polyline>
+                </svg>
+            </a>
+            <p class="cta-note">Opens your Campaigns, Search Terms &amp; Products dashboard</p>
+
+            <div class="chips">
+                <span class="chip">Campaigns</span>
+                <span class="chip">Search Terms</span>
+                <span class="chip">Products</span>
+                <span class="chip">Impressions</span>
+            </div>
+        </section>
+    </main>
+
+
+    </div>
+
+    <div id="dashboardView" style="display:none;">
+    <div class="dash-blobs" aria-hidden="true">
+        <div class="blob blob-a"></div>
+        <div class="blob blob-b"></div>
+        <div class="blob blob-c"></div>
+    </div>
+    <div class="container">
+        <div class="main">
+            <div class="header">
+                <div class="header-title">PPC Analytics</div>
+                <div class="header-location">India</div>
+            </div>
+
+            <div class="content">
+                <div class="message" id="successMsg"></div>
+                <div class="message" id="errorMsg"></div>
+                <div class="title-fetch-banner" id="titleFetchBanner" style="display:none;">
+                    <div class="title-fetch-row">
+                        <span class="title-fetch-spinner" aria-hidden="true"></span>
+                        <span id="titleFetchLabel">Fetching product titles…</span>
+                    </div>
+                    <div class="title-fetch-track"><div class="title-fetch-fill" id="titleFetchFill"></div></div>
+                </div>
+                <div class="title-fetch-banner" id="titleRetryBanner" style="display:none;">
+                    <div class="title-fetch-row" style="margin-bottom:0; justify-content: space-between;">
+                        <span id="titleRetryLabel">Some titles could not be found.</span>
+                        <button class="filter-btn" onclick="handleRetryTitles()" id="titleRetryBtn" style="white-space:nowrap;">Retry failed titles</button>
+                    </div>
+                </div>
+
+                <div class="upload-section" id="uploadSection">
+                    <div class="upload-intro">
+                        <span class="eyebrow">Data Input</span>
+                        <p class="upload-instruction">Upload your campaign and search term reports, then run the analysis.</p>
+                    </div>
+                    <div class="upload-grid" style="grid-template-columns: repeat(2, 1fr);">
+                        <div class="upload-area" id="productUploadArea">
+                            <div class="upload-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16l4-4 4 4"></path><path d="M12 12v9"></path><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 104 16.3"></path></svg>
+                            </div>
+                            <h3>Products Report</h3>
+                            <p>Campaign data</p>
+                            <button class="upload-btn" onclick="chooseProductFile()">Select File</button>
+                            <input type="file" id="productFile" class="file-input" accept=".xlsx,.csv" onchange="handleProductFile(event)">
+                            <div class="file-name" id="productFileName"></div>
+                        </div>
+
+                        <div class="upload-area" id="keywordUploadArea">
+                            <div class="upload-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            </div>
+                            <h3>Keywords Report</h3>
+                            <p>Search terms</p>
+                            <button class="upload-btn" onclick="chooseKeywordFile()">Select File</button>
+                            <input type="file" id="keywordFile" class="file-input" accept=".xlsx,.csv" onchange="handleKeywordFile(event)">
+                            <div class="file-name" id="keywordFileName"></div>
+                        </div>
+                    </div>
+
+                    <div class="upload-actions">
+                        <button class="upload-btn analyze" onclick="analyzeData()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            Analyze
+                        </button>
+                    </div>
+                </div>
+
+                <div class="loading" id="loading">
+                    <svg class="loader-chart" viewBox="0 0 220 70">
+                        <defs>
+                            <linearGradient id="loaderGrad" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stop-color="#0F7A6E" />
+                                <stop offset="100%" stop-color="#1C4E9C" />
+                            </linearGradient>
+                        </defs>
+                        <g class="loader-grid">
+                            <line x1="0" y1="14" x2="220" y2="14"></line>
+                            <line x1="0" y1="35" x2="220" y2="35"></line>
+                            <line x1="0" y1="56" x2="220" y2="56"></line>
+                        </g>
+                        <g class="loader-track">
+                            <path class="loader-line" d="M0,55 L28,42 L52,48 L78,24 L108,32 L138,13 L168,20 L198,7 L220,11 L248,42 L272,48 L298,24 L328,32 L358,13 L388,20 L418,7 L440,11"></path>
+                        </g>
+                    </svg>
+                    <p class="loader-label" id="loadingText"><span class="loader-live-dot"></span>Analyzing<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span></p>
+                </div>
+
+                <div class="dashboard" id="dashboard">
+                    <div class="title">Performance</div>
+
+                    <div class="section">
+                        <div class="section-title">Campaign Analytics</div>
+
+                        <div class="daterange-bar" id="dateRangeBar" style="display:none;">
+                            <div class="filter-group">
+                                <label>Start Date</label>
+                                <input type="date" id="dateStart" onchange="applyDateRange()">
+                            </div>
+                            <div class="filter-group">
+                                <label>End Date</label>
+                                <input type="date" id="dateEnd" onchange="applyDateRange()">
+                            </div>
+                            <div class="daterange-quick">
+                                <button class="quick-btn" onclick="setQuickRange('today')">Today</button>
+                                <button class="quick-btn" onclick="setQuickRange('yesterday')">Yesterday</button>
+                                <button class="quick-btn" onclick="setQuickRange('7d')">Last 7 Days</button>
+                                <button class="quick-btn" onclick="setQuickRange('30d')">Last 30 Days</button>
+                                <button class="quick-btn active" onclick="setQuickRange('all')">All Time</button>
+                            </div>
+                            <div class="daterange-hint" id="dateRangeHint"></div>
+                        </div>
+
+                        <div class="kpi-grid" id="kpiGrid"></div>
+
+                        <div class="chart-controls">
+                            <span class="chart-label">Metrics:</span>
+                            <label class="metric-checkbox metric-roas">
+                                <input type="checkbox" id="chkROAS" checked onchange="updateChart()">
+                                <span>ROAS</span>
+                            </label>
+                            <label class="metric-checkbox metric-acos">
+                                <input type="checkbox" id="chkACOS" checked onchange="updateChart()">
+                                <span>ACOS %</span>
+                            </label>
+                            <label class="metric-checkbox metric-spend">
+                                <input type="checkbox" id="chkSpend" checked onchange="updateChart()">
+                                <span>Spend</span>
+                            </label>
+                            <label class="metric-checkbox metric-sales">
+                                <input type="checkbox" id="chkSales" checked onchange="updateChart()">
+                                <span>Sales</span>
+                            </label>
+                        </div>
+
+                        <div class="chart-area">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="section" id="trendSection" style="display:none;">
+                        <div class="section-title">Daily Performance Trend (Spend vs Sales)</div>
+                        <div class="chart-area">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="downloadExcelReport()">Download Report</button>
+                        <button class="btn btn-secondary" onclick="resetDashboard()">New Analysis</button>
+                    </div>
+
+                    <div class="section">
+                        <div class="tabs">
+                            <button class="tab-btn active" onclick="switchTab(event, 'campaigns')">Campaigns</button>
+                            <button class="tab-btn" onclick="switchTab(event, 'keywords')">Search Terms</button>
+                            <button class="tab-btn" onclick="switchTab(event, 'asins')">Products</button>
+                        </div>
+
+                        <div id="campaigns" class="tab-content active">
+                            <div class="filter-section">
+                                <div class="filter-label">Filter</div>
+                                <div class="filter-group">
+                                    <label>Status</label>
+                                    <select id="cStatus" onchange="applyCFilters()">
+                                        <option value="">All</option>
+                                        <option value="scale">Scale</option>
+                                        <option value="reduce">Reduce</option>
+                                        <option value="pause">Pause</option>
+                                        <option value="maintain">Maintain</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>Min ROAS</label>
+                                    <input type="number" id="cMinROAS" onchange="applyCFilters()" min="0" step="0.1">
+                                </div>
+                                <div class="filter-group">
+                                    <label>Max ACOS %</label>
+                                    <input type="number" id="cMaxACOS" onchange="applyCFilters()" min="0" step="0.1">
+                                </div>
+                                <div class="filter-group">
+                                    <label>Min Spend</label>
+                                    <input type="number" id="cMinSpend" onchange="applyCFilters()" min="0">
+                                </div>
+                                <div class="filter-group">
+                                    <button class="filter-btn" onclick="resetCFilters()">Reset</button>
+                                </div>
+                            </div>
+                            <div class="summary" id="cSummary"></div>
+                            <div class="table-wrapper">
+                                <table class="data-table" id="cTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Campaign</th>
+                                            <th>Impressions</th>
+                                            <th>Clicks</th>
+                                            <th>CTR %</th>
+                                            <th>Spend</th>
+                                            <th>Spend Cont. %</th>
+                                            <th>Sales</th>
+                                            <th>Sales Cont. %</th>
+                                            <th>ACOS %</th>
+                                            <th>ROAS</th>
+                                            <th>Orders</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div id="keywords" class="tab-content">
+                            <div class="filter-section">
+                                <div class="filter-label">Filter</div>
+                                <div class="filter-group">
+                                    <label>Status</label>
+                                    <select id="kStatus" onchange="applyKFilters()">
+                                        <option value="">All</option>
+                                        <option value="scale">Scale</option>
+                                        <option value="reduce">Reduce</option>
+                                        <option value="pause">Pause</option>
+                                        <option value="maintain">Maintain</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>Min ROAS</label>
+                                    <input type="number" id="kMinROAS" onchange="applyKFilters()" min="0" step="0.1">
+                                </div>
+                                <div class="filter-group">
+                                    <label>Max ACOS %</label>
+                                    <input type="number" id="kMaxACOS" onchange="applyKFilters()" min="0" step="0.1">
+                                </div>
+                                <div class="filter-group">
+                                    <button class="filter-btn" onclick="resetKFilters()">Reset</button>
+                                </div>
+                            </div>
+                            <div style="background: #f5f7ff; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; color: #0d47a1; border-left: 3px solid var(--accent);">
+                                Top 100 search terms. Download report for full data.
+                            </div>
+                            <div class="summary" id="kSummary"></div>
+                            <div class="table-wrapper">
+                                <table class="data-table" id="kTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Search Term</th>
+                                            <th>Campaign</th>
+                                            <th>Clicks</th>
+                                            <th>Spend</th>
+                                            <th>Spend Cont. %</th>
+                                            <th>Sales</th>
+                                            <th>Sales Cont. %</th>
+                                            <th>ACOS %</th>
+                                            <th>ROAS</th>
+                                            <th>CVR %</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div id="asins" class="tab-content">
+                            <div class="filter-section">
+                                <div class="filter-label">Filter</div>
+                                <div class="filter-group">
+                                    <label>Status</label>
+                                    <select id="aStatus" onchange="applyAFilters()">
+                                        <option value="">All</option>
+                                        <option value="good">Good</option>
+                                        <option value="review">Review</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>Min ROAS</label>
+                                    <input type="number" id="aMinROAS" onchange="applyAFilters()" min="0" step="0.1">
+                                </div>
+                                <div class="filter-group">
+                                    <label>Max ACOS %</label>
+                                    <input type="number" id="aMaxACOS" onchange="applyAFilters()" min="0" step="0.1">
+                                </div>
+                                <div class="filter-group">
+                                    <button class="filter-btn" onclick="resetAFilters()">Reset</button>
+                                </div>
+                            </div>
+                            <div class="summary" id="aSummary"></div>
+                            <div class="table-wrapper">
+                                <table class="data-table" id="aTable">
+                                    <thead>
+                                        <tr>
+                                            <th>ASIN</th>
+                                            <th>Title</th>
+                                            <th>Sales</th>
+                                            <th>Sales Cont. %</th>
+                                            <th>Orders</th>
+                                            <th>Clicks</th>
+                                            <th>Spend</th>
+                                            <th>Spend Cont. %</th>
+                                            <th>ACOS %</th>
+                                            <th>ROAS</th>
+                                            <th>CVR %</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let productData = null;
+        let keywordData = null;
+        let catalogData = {}; // ASIN -> Title cache, populated by auto-fetch from Amazon product pages
+        let analysisData = null;
+        let rawCampaignRows = null;
+        let rawKeywordRows = null;
+        let fullDateRange = { start: null, end: null };
+        let chartInstance = null;
+        let trendChartInstance = null;
+        let titleFetchInProgress = false;
+
+        function launchDashboard() {
+            const launchpad = document.getElementById('launchpadView');
+            const dashboard = document.getElementById('dashboardView');
+            launchpad.style.transition = 'opacity 0.25s ease';
+            launchpad.style.opacity = '0';
+            setTimeout(() => {
+                launchpad.style.display = 'none';
+                dashboard.style.display = 'block';
+                window.scrollTo(0, 0);
+            }, 250);
+        }
+
+        function chooseProductFile() {
+            document.getElementById('productFile').click();
+        }
+
+        function chooseKeywordFile() {
+            document.getElementById('keywordFile').click();
+        }
+
+        function handleProductFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const ws = workbook.Sheets[workbook.SheetNames[0]];
+                    productData = XLSX.utils.sheet_to_json(ws);
+                    document.getElementById('productFileName').textContent = `✓ ${file.name}`;
+                    showSuccess(`Loaded ${productData.length} campaigns`);
+                } catch (error) {
+                    showError('Error: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function handleKeywordFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            document.getElementById('loading').classList.add('show');
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const ws = workbook.Sheets[workbook.SheetNames[0]];
+                    keywordData = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                    if (keywordData.length > 0) {
+                        const headers = keywordData[0];
+                        keywordData = keywordData.slice(1).map(row => {
+                            const obj = {};
+                            headers.forEach((h, i) => obj[h] = row[i] || '');
+                            return obj;
+                        });
+                    }
+                    document.getElementById('loading').classList.remove('show');
+                    document.getElementById('keywordFileName').textContent = `✓ ${file.name}`;
+                    showSuccess(`Loaded ${keywordData.length} keywords`);
+                } catch (error) {
+                    document.getElementById('loading').classList.remove('show');
+                    showError('Error: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // ---- Automatic ASIN -> Title resolution ----
+        // Title lookups now go through our own Vercel serverless backend
+        // (api/index.py), which fetches the Amazon product page directly and
+        // extracts the title server-side. No third-party CORS proxies, no
+        // client-side HTML parsing — the frontend just asks the backend for
+        // a title and gets back a clean string or null.
+        const TITLE_FETCH_CONCURRENCY = 2;
+        const TITLE_FETCH_TIMEOUT_MS = 12000;
+        const TITLE_FETCH_BATCH_SIZE = 15;   // ASINs per wave
+        const TITLE_FETCH_BATCH_PAUSE_MS = 1500; // pause between waves so we don't hammer our own backend / Amazon
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        async function fetchWithTimeout(url, ms) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), ms);
+            try {
+                return await fetch(url, { signal: controller.signal });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        // Calls our own backend at /api/fetch-title/{asin}. Returns the title
+        // string on success, or null on any failure (network error, non-200,
+        // or the backend reporting it couldn't find a title).
+        async function fetchAsinTitle(asin) {
+            try {
+                const res = await fetchWithTimeout(`/api/fetch-title/${asin}`, TITLE_FETCH_TIMEOUT_MS);
+                if (!res.ok) return null;
+                const data = await res.json();
+                if (data && data.success && data.title) return data.title;
+                return null;
+            } catch (err) {
+                return null;
+            }
+        }
+
+        // Resolve titles for a list of ASINs with limited concurrency, processed in
+        // small waves with a pause between each — large batches (50+) are much less
+        // likely to get rate-limited (by our own backend or by Amazon) this way than
+        // firing every request in one continuous stream.
+        async function resolveTitlesForAsins(asins, onProgress) {
+            const pending = asins.filter(a => a && !catalogData[a]);
+            let done = 0;
+            const total = pending.length;
+            if (total === 0) { if (onProgress) onProgress(0, 0); return; }
+
+            for (let i = 0; i < pending.length; i += TITLE_FETCH_BATCH_SIZE) {
+                const batch = pending.slice(i, i + TITLE_FETCH_BATCH_SIZE);
+                let cursor = 0;
+                async function worker() {
+                    while (cursor < batch.length) {
+                        const asin = batch[cursor++];
+                        const title = await fetchAsinTitle(asin);
+                        catalogData[asin] = title || 'No matching title found';
+                        done++;
+                        if (onProgress) onProgress(done, total);
+                    }
+                }
+                const workers = Array.from({ length: Math.min(TITLE_FETCH_CONCURRENCY, batch.length) }, worker);
+                await Promise.all(workers);
+                if (i + TITLE_FETCH_BATCH_SIZE < pending.length) {
+                    await sleep(TITLE_FETCH_BATCH_PAUSE_MS);
+                }
+            }
+        }
+
+        // Re-attempts only the ASINs that previously failed ("No matching title found"),
+        // exposed as a manual retry button since transient proxy/Amazon failures are common.
+        async function retryFailedTitles(onProgress) {
+            const failed = Object.keys(catalogData).filter(asin => catalogData[asin] === 'No matching title found');
+            failed.forEach(asin => delete catalogData[asin]);
+            await resolveTitlesForAsins(failed, onProgress);
+        }
+
+        function findColumn(row, keywords) {
+            for (const keyword of keywords) {
+                for (const key in row) {
+                    if (key.toLowerCase().includes(keyword.toLowerCase())) return key;
+                }
+            }
+            return null;
+        }
+
+        function parseDateValue(val) {
+            if (val === null || val === undefined || val === '') return null;
+            if (val instanceof Date && !isNaN(val)) return toISODate(val);
+            if (typeof val === 'number') {
+                // Excel serial date
+                const d = XLSX.SSF.parse_date_code(val);
+                if (d) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+                return null;
+            }
+            const str = String(val).trim();
+            if (!str) return null;
+            // Try native parse first (handles ISO and many common formats)
+            let d = new Date(str);
+            if (!isNaN(d) && str.match(/\d{4}/)) return toISODate(d);
+            // Try DD/MM/YYYY or MM/DD/YYYY
+            const m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+            if (m) {
+                let [, a, b, y] = m;
+                if (y.length === 2) y = '20' + y;
+                // Assume MM/DD/YYYY (Amazon US default) unless first part > 12
+                let month = parseInt(a), day = parseInt(b);
+                if (month > 12) { [month, day] = [day, month]; }
+                d = new Date(parseInt(y), month - 1, day);
+                if (!isNaN(d)) return toISODate(d);
+            }
+            return null;
+        }
+
+        function toISODate(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function formatNumber(num) {
+            if (num >= 10000000) return (num / 10000000).toFixed(1) + 'Cr';
+            if (num >= 100000) return (num / 100000).toFixed(1) + 'L';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toFixed(0);
+        }
+
+        function analyzeData() {
+            if (!productData) { showError('Upload campaigns file'); return; }
+            document.getElementById('loading').classList.add('show');
+            setTimeout(() => {
+                try {
+                    rawCampaignRows = productData.map(row => ({
+                        Campaign: String(row[findColumn(row, ['campaign'])] || '').trim(),
+                        Spend: parseFloat(row[findColumn(row, ['spend', 'cost'])] || 0),
+                        Sales: parseFloat(row[findColumn(row, ['sales', 'revenue'])] || 0),
+                        Orders: parseInt(row[findColumn(row, ['orders', 'conversions'])] || 0),
+                        Clicks: parseInt(row[findColumn(row, ['clicks'])] || 0),
+                        Impressions: parseInt(row[findColumn(row, ['impressions'])] || 0),
+                        ASIN: String(row[findColumn(row, ['advertised asin', 'asin'])] || '').trim(),
+                        Date: parseDateValue(row[findColumn(row, ['date', 'day', 'start date'])])
+                    })).filter(r => r.Spend > 0 || r.Orders > 0);
+
+                    rawKeywordRows = [];
+                    if (keywordData && keywordData.length > 0) {
+                        rawKeywordRows = keywordData.map(row => ({
+                            Campaign: String(row[findColumn(row, ['campaign'])] || '').trim(),
+                            Keyword: String(row[findColumn(row, ['search', 'keyword', 'term'])] || '').trim(),
+                            Spend: parseFloat(row[findColumn(row, ['spend', 'cost'])] || 0),
+                            Sales: parseFloat(row[findColumn(row, ['sales', 'revenue'])] || 0),
+                            Orders: parseInt(row[findColumn(row, ['orders'])] || 0),
+                            Clicks: parseInt(row[findColumn(row, ['clicks'])] || 0),
+                            Date: parseDateValue(row[findColumn(row, ['date', 'day', 'start date'])])
+                        }));
+                    }
+
+                    const allDates = rawCampaignRows.map(r => r.Date).filter(Boolean).sort();
+                    fullDateRange.start = allDates.length ? allDates[0] : null;
+                    fullDateRange.end = allDates.length ? allDates[allDates.length - 1] : null;
+
+                    const dateBar = document.getElementById('dateRangeBar');
+                    if (fullDateRange.start && fullDateRange.end) {
+                        dateBar.style.display = 'flex';
+                        document.getElementById('dateStart').min = fullDateRange.start;
+                        document.getElementById('dateStart').max = fullDateRange.end;
+                        document.getElementById('dateEnd').min = fullDateRange.start;
+                        document.getElementById('dateEnd').max = fullDateRange.end;
+                        document.getElementById('dateStart').value = fullDateRange.start;
+                        document.getElementById('dateEnd').value = fullDateRange.end;
+                        document.getElementById('trendSection').style.display = 'block';
+                    } else {
+                        dateBar.style.display = 'none';
+                        document.getElementById('trendSection').style.display = 'none';
+                    }
+
+                    runAnalysis(fullDateRange.start, fullDateRange.end);
+                    displayDashboard();
+                    showSuccess('Analysis complete');
+                    fetchProductTitles();
+                } catch (error) {
+                    showError('Error: ' + error.message);
+                } finally {
+                    document.getElementById('loading').classList.remove('show');
+                }
+            }, 100);
+        }
+
+        // Kicks off background ASIN -> Title resolution for every ASIN in the current
+        // dataset, then re-renders the Products table progressively as titles arrive.
+        function refreshAsinTitlesFromCache() {
+            if (analysisData && analysisData.asins) {
+                analysisData.asins.forEach(a => {
+                    if (catalogData[a.ASIN]) a.Title = catalogData[a.ASIN];
+                });
+                renderAsins();
+            }
+        }
+
+        function updateRetryBanner() {
+            const uniqueAsins = rawCampaignRows ? [...new Set(rawCampaignRows.map(r => r.ASIN).filter(Boolean))] : [];
+            const failedCount = uniqueAsins.filter(a => catalogData[a] === 'No matching title found').length;
+            const retryBanner = document.getElementById('titleRetryBanner');
+            const retryLabel = document.getElementById('titleRetryLabel');
+            if (!retryBanner) return;
+            if (failedCount > 0) {
+                retryBanner.style.display = 'flex';
+                if (retryLabel) retryLabel.textContent = `${failedCount} of ${uniqueAsins.length} product titles couldn't be found.`;
+            } else {
+                retryBanner.style.display = 'none';
+            }
+        }
+
+        function fetchProductTitles() {
+            if (!rawCampaignRows || titleFetchInProgress) return;
+            const uniqueAsins = [...new Set(rawCampaignRows.map(r => r.ASIN).filter(Boolean))];
+            const pending = uniqueAsins.filter(a => !catalogData[a]);
+            if (pending.length === 0) { updateRetryBanner(); return; }
+
+            titleFetchInProgress = true;
+            const banner = document.getElementById('titleFetchBanner');
+            const fill = document.getElementById('titleFetchFill');
+            const label = document.getElementById('titleFetchLabel');
+            const retryBanner = document.getElementById('titleRetryBanner');
+            if (retryBanner) retryBanner.style.display = 'none';
+            if (banner) banner.style.display = 'flex';
+            if (label) label.textContent = `Fetching product titles… 0 / ${pending.length}`;
+            if (fill) fill.style.width = '0%';
+
+            resolveTitlesForAsins(uniqueAsins, (done, total) => {
+                if (label) label.textContent = `Fetching product titles… ${done} / ${total}`;
+                if (fill) fill.style.width = total > 0 ? `${Math.round(done / total * 100)}%` : '0%';
+                refreshAsinTitlesFromCache();
+            }).then(() => {
+                titleFetchInProgress = false;
+                if (banner) banner.style.display = 'none';
+                updateRetryBanner();
+            }).catch(() => {
+                titleFetchInProgress = false;
+                if (banner) banner.style.display = 'none';
+                updateRetryBanner();
+            });
+        }
+
+        function handleRetryTitles() {
+            if (titleFetchInProgress) return;
+            const btn = document.getElementById('titleRetryBtn');
+            const retryBanner = document.getElementById('titleRetryBanner');
+            const banner = document.getElementById('titleFetchBanner');
+            const fill = document.getElementById('titleFetchFill');
+            const label = document.getElementById('titleFetchLabel');
+            if (btn) btn.disabled = true;
+            if (retryBanner) retryBanner.style.display = 'none';
+
+            titleFetchInProgress = true;
+            if (banner) banner.style.display = 'flex';
+            if (label) label.textContent = 'Retrying failed titles…';
+            if (fill) fill.style.width = '0%';
+
+            retryFailedTitles((done, total) => {
+                if (label) label.textContent = `Retrying failed titles… ${done} / ${total}`;
+                if (fill) fill.style.width = total > 0 ? `${Math.round(done / total * 100)}%` : '0%';
+                refreshAsinTitlesFromCache();
+            }).then(() => {
+                titleFetchInProgress = false;
+                if (banner) banner.style.display = 'none';
+                if (btn) btn.disabled = false;
+                updateRetryBanner();
+            }).catch(() => {
+                titleFetchInProgress = false;
+                if (banner) banner.style.display = 'none';
+                if (btn) btn.disabled = false;
+                updateRetryBanner();
+            });
+        }
+
+        function runAnalysis(startDate, endDate) {
+            const inRange = d => {
+                if (!d) return true; // rows without a parsed date are always included
+                if (startDate && d < startDate) return false;
+                if (endDate && d > endDate) return false;
+                return true;
+            };
+
+            const campaignRows = rawCampaignRows.filter(r => inRange(r.Date));
+
+            const totals = {
+                spend: campaignRows.reduce((s,r) => s + r.Spend, 0),
+                sales: campaignRows.reduce((s,r) => s + r.Sales, 0),
+                orders: campaignRows.reduce((s,r) => s + r.Orders, 0),
+                clicks: campaignRows.reduce((s,r) => s + r.Clicks, 0),
+                impressions: campaignRows.reduce((s,r) => s + r.Impressions, 0),
+            };
+            totals.acos = totals.sales > 0 ? (totals.spend / totals.sales * 100) : 0;
+            totals.roas = totals.spend > 0 ? (totals.sales / totals.spend) : 0;
+            totals.ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions * 100) : 0;
+            totals.cvr = totals.clicks > 0 ? (totals.orders / totals.clicks * 100) : 0;
+
+            // GMV = total PPC Ad Sales for the active (filtered) date range. Always auto-computed —
+            // this is the denominator every contribution % (campaign, product, keyword) is measured against.
+            const gmvBaseline = totals.sales;
+            totals.gmvBaseline = gmvBaseline;
+
+            // Group campaign-day rows by Campaign name so a multi-date upload yields
+            // one row per campaign (summed across the selected date range), not one row per day.
+            const campaignMap = {};
+            campaignRows.forEach(r => {
+                const key = r.Campaign || '(Unnamed Campaign)';
+                if (!campaignMap[key]) campaignMap[key] = { Campaign: key, Spend: 0, Sales: 0, Orders: 0, Clicks: 0, Impressions: 0 };
+                campaignMap[key].Spend += r.Spend;
+                campaignMap[key].Sales += r.Sales;
+                campaignMap[key].Orders += r.Orders;
+                campaignMap[key].Clicks += r.Clicks;
+                campaignMap[key].Impressions += r.Impressions;
+            });
+
+            const analyzedCampaigns = Object.values(campaignMap).map(camp => {
+                const acos = camp.Sales > 0 ? (camp.Spend / camp.Sales * 100) : 0;
+                const roas = camp.Spend > 0 ? (camp.Sales / camp.Spend) : 0;
+                const ctr = camp.Impressions > 0 ? (camp.Clicks / camp.Impressions * 100) : 0;
+                const cvr = camp.Clicks > 0 ? (camp.Orders / camp.Clicks * 100) : 0;
+                const spendContribution = totals.spend > 0 ? (camp.Spend / totals.spend * 100) : 0;
+                const salesContribution = gmvBaseline > 0 ? (camp.Sales / gmvBaseline * 100) : 0;
+                let status = roas > 3 ? 'scale' : roas > 2 ? 'maintain' : roas > 1 ? 'reduce' : 'pause';
+                return { ...camp, ACOS: acos.toFixed(2), ROAS: roas.toFixed(2), CTR: ctr.toFixed(2), CVR: cvr.toFixed(2), SpendContribution: spendContribution.toFixed(2), SalesContribution: salesContribution.toFixed(2), Status: status, Action: status === 'scale' ? 'Increase' : status === 'maintain' ? 'Monitor' : status === 'reduce' ? 'Reduce' : 'Pause' };
+            }).sort((a,b) => b.Spend - a.Spend);
+
+            let keywords = [];
+            if (rawKeywordRows && rawKeywordRows.length > 0) {
+                const kwdRows = rawKeywordRows.filter(r => inRange(r.Date));
+                const kwdMap = {};
+                kwdRows.forEach(r => {
+                    const key = (r.Keyword || '(Unknown Term)') + '||' + (r.Campaign || '');
+                    if (!kwdMap[key]) kwdMap[key] = { Keyword: r.Keyword || '(Unknown Term)', Campaign: r.Campaign, Spend: 0, Sales: 0, Orders: 0, Clicks: 0 };
+                    kwdMap[key].Spend += r.Spend;
+                    kwdMap[key].Sales += r.Sales;
+                    kwdMap[key].Orders += r.Orders;
+                    kwdMap[key].Clicks += r.Clicks;
+                });
+                const kwdTotalSpend = kwdRows.reduce((s,r) => s + r.Spend, 0);
+                keywords = Object.values(kwdMap).map(kwd => {
+                    const acos = kwd.Sales > 0 ? (kwd.Spend / kwd.Sales * 100) : 0;
+                    const roas = kwd.Spend > 0 ? (kwd.Sales / kwd.Spend) : 0;
+                    const cvr = kwd.Clicks > 0 ? (kwd.Orders / kwd.Clicks * 100) : 0;
+                    const spendContribution = kwdTotalSpend > 0 ? (kwd.Spend / kwdTotalSpend * 100) : 0;
+                    const salesContribution = gmvBaseline > 0 ? (kwd.Sales / gmvBaseline * 100) : 0;
+                    let status = kwd.Sales === 0 ? 'pause' : roas > 3 ? 'scale' : roas > 2 ? 'maintain' : 'reduce';
+                    return { ...kwd, ACOS: acos.toFixed(2), ROAS: roas.toFixed(2), CVR: cvr.toFixed(2), SpendContribution: spendContribution.toFixed(2), SalesContribution: salesContribution.toFixed(2), Status: status, Action: status === 'scale' ? 'Increase' : status === 'pause' ? 'Add Negative' : status === 'maintain' ? 'Monitor' : 'Reduce' };
+                }).sort((a,b) => b.Spend - a.Spend);
+            }
+
+            const asinMap = {};
+            campaignRows.forEach(p => {
+                if (p.ASIN) {
+                    if (!asinMap[p.ASIN]) asinMap[p.ASIN] = { ASIN: p.ASIN, Spend: 0, Sales: 0, Orders: 0, Clicks: 0 };
+                    asinMap[p.ASIN].Spend += p.Spend;
+                    asinMap[p.ASIN].Sales += p.Sales;
+                    asinMap[p.ASIN].Orders += p.Orders;
+                    asinMap[p.ASIN].Clicks += p.Clicks;
+                }
+            });
+
+            const asins = Object.values(asinMap).map(a => {
+                const acos = a.Sales > 0 ? (a.Spend / a.Sales * 100) : 0;
+                const roas = a.Spend > 0 ? (a.Sales / a.Spend) : 0;
+                const cvr = a.Clicks > 0 ? (a.Orders / a.Clicks * 100) : 0;
+                const spendContribution = totals.spend > 0 ? (a.Spend / totals.spend * 100) : 0;
+                const salesContribution = gmvBaseline > 0 ? (a.Sales / gmvBaseline * 100) : 0;
+                const title = (catalogData && catalogData[a.ASIN]) ? catalogData[a.ASIN] : 'No matching title found';
+                return { ...a, Title: title, ACOS: acos.toFixed(2), ROAS: roas.toFixed(2), CVR: cvr.toFixed(2), SpendContribution: spendContribution.toFixed(2), SalesContribution: salesContribution.toFixed(2), Status: roas > 2 ? 'good' : 'review' };
+            }).sort((a,b) => b.Spend - a.Spend);
+
+            // Daily trend series for the time-series chart
+            const dailyMap = {};
+            campaignRows.forEach(c => {
+                if (!c.Date) return;
+                if (!dailyMap[c.Date]) dailyMap[c.Date] = { Date: c.Date, Spend: 0, Sales: 0 };
+                dailyMap[c.Date].Spend += c.Spend;
+                dailyMap[c.Date].Sales += c.Sales;
+            });
+            const daily = Object.values(dailyMap).sort((a,b) => a.Date.localeCompare(b.Date));
+
+            analysisData = { totals, campaigns: analyzedCampaigns, keywords, asins, daily };
+        }
+
+        function applyDateRange() {
+            if (!rawCampaignRows) return;
+            let start = document.getElementById('dateStart').value || fullDateRange.start;
+            let end = document.getElementById('dateEnd').value || fullDateRange.end;
+            if (start > end) { showError('Start date is after end date'); return; }
+            document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('dateRangeHint').textContent = `Showing ${start} to ${end}`;
+            runAnalysis(start, end);
+            displayDashboard();
+        }
+
+        function setQuickRange(range) {
+            if (!fullDateRange.end) return;
+            document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            const end = new Date(fullDateRange.end);
+            let start = new Date(fullDateRange.end);
+            let rangeEnd = fullDateRange.end;
+            if (range === 'today') {
+                start = end;
+            } else if (range === 'yesterday') {
+                start.setDate(start.getDate() - 1);
+                end.setDate(end.getDate() - 1);
+                rangeEnd = toISODate(end);
+            } else if (range === '7d') {
+                start.setDate(start.getDate() - 6);
+            } else if (range === '30d') {
+                start.setDate(start.getDate() - 29);
+            } else if (range === 'all') {
+                start = new Date(fullDateRange.start);
+                rangeEnd = fullDateRange.end;
+            }
+            let rangeStart = toISODate(start);
+            if (rangeStart < fullDateRange.start) rangeStart = fullDateRange.start;
+            document.getElementById('dateStart').value = rangeStart;
+            document.getElementById('dateEnd').value = rangeEnd;
+            document.getElementById('dateRangeHint').textContent = `Showing ${rangeStart} to ${rangeEnd}`;
+            runAnalysis(rangeStart, rangeEnd);
+            displayDashboard();
+        }
+
+        function displayDashboard() {
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('dashboard').classList.add('show');
+            displayKPIs();
+            updateChart();
+            updateTrendChart();
+            renderCampaigns();
+            renderKeywords();
+            renderAsins();
+            document.querySelector('.content').scrollTo(0, 0);
+        }
+
+        function displayKPIs() {
+            const {totals} = analysisData;
+            const icons = {
+                roas: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline>',
+                cost: '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line>',
+                sales: '<path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path>',
+                acos: '<line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle>',
+                impressions: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'
+            };
+            const icon = key => `<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons[key]}</svg>`;
+            const html = `
+                <div class="kpi-card kpi-sales kpi-hero"><div class="kpi-icon">${icon('sales')}</div><div class="kpi-body"><div class="kpi-label">Ad Sales (GMV)</div><div class="kpi-value">${formatNumber(totals.gmvBaseline)}</div><div class="kpi-sub">Contribution baseline for this range</div></div></div>
+                <div class="kpi-card kpi-roas"><div class="kpi-icon">${icon('roas')}</div><div class="kpi-body"><div class="kpi-label">ROAS</div><div class="kpi-value">${totals.roas.toFixed(2)}<span class="kpi-unit">x</span></div></div></div>
+                <div class="kpi-card kpi-cost"><div class="kpi-icon">${icon('cost')}</div><div class="kpi-body"><div class="kpi-label">Total Spend</div><div class="kpi-value">${formatNumber(totals.spend)}</div></div></div>
+                <div class="kpi-card kpi-acos"><div class="kpi-icon">${icon('acos')}</div><div class="kpi-body"><div class="kpi-label">ACOS</div><div class="kpi-value">${totals.acos.toFixed(2)}<span class="kpi-unit">%</span></div></div></div>
+                <div class="kpi-card kpi-impressions"><div class="kpi-icon">${icon('impressions')}</div><div class="kpi-body"><div class="kpi-label">Impressions</div><div class="kpi-value">${formatNumber(totals.impressions)}</div></div></div>
+            `;
+            document.getElementById('kpiGrid').innerHTML = html;
+        }
+
+        function updateChart() {
+            const {campaigns} = analysisData;
+            const top5 = campaigns.slice(0, 5);
+            const datasets = [];
+            if (document.getElementById('chkROAS').checked) {
+                datasets.push({
+                    label: 'ROAS',
+                    data: top5.map(c => parseFloat(c.ROAS)),
+                    borderColor: '#0071e3',
+                    backgroundColor: 'rgba(0, 113, 227, 0.08)',
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y',
+                    borderWidth: 2.5
+                });
+            }
+            if (document.getElementById('chkACOS').checked) {
+                datasets.push({
+                    label: 'ACOS %',
+                    data: top5.map(c => parseFloat(c.ACOS)),
+                    borderColor: '#ff9500',
+                    backgroundColor: 'rgba(255, 149, 0, 0)',
+                    tension: 0.4,
+                    fill: false,
+                    yAxisID: 'y1',
+                    borderWidth: 2.5
+                });
+            }
+            if (document.getElementById('chkSpend').checked) {
+                datasets.push({
+                    label: 'Spend',
+                    data: top5.map(c => (c.Spend/1000).toFixed(1)),
+                    borderColor: '#34c759',
+                    backgroundColor: 'rgba(52, 199, 89, 0)',
+                    tension: 0.4,
+                    fill: false,
+                    yAxisID: 'y2',
+                    borderWidth: 2.5
+                });
+            }
+            if (document.getElementById('chkSales').checked) {
+                datasets.push({
+                    label: 'Sales',
+                    data: top5.map(c => (c.Sales/1000).toFixed(1)),
+                    borderColor: '#ff3b30',
+                    backgroundColor: 'rgba(255, 59, 48, 0)',
+                    tension: 0.4,
+                    fill: false,
+                    yAxisID: 'y2',
+                    borderWidth: 2.5
+                });
+            }
+            const ctx = document.getElementById('performanceChart');
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: top5.map(c => c.Campaign.substring(0, 12)),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { type: 'linear', display: document.getElementById('chkROAS').checked, position: 'left' },
+                        y1: { type: 'linear', display: document.getElementById('chkACOS').checked, position: 'left' },
+                        y2: { type: 'linear', display: (document.getElementById('chkSpend').checked || document.getElementById('chkSales').checked), position: 'right', grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        }
+
+        function updateTrendChart() {
+            const section = document.getElementById('trendSection');
+            if (!analysisData.daily || analysisData.daily.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            section.style.display = 'block';
+            const {daily} = analysisData;
+            const ctx = document.getElementById('trendChart');
+            if (trendChartInstance) trendChartInstance.destroy();
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: daily.map(d => d.Date),
+                    datasets: [
+                        {
+                            label: 'Spend',
+                            data: daily.map(d => d.Spend.toFixed(2)),
+                            borderColor: '#34c759',
+                            backgroundColor: 'rgba(52, 199, 89, 0.08)',
+                            tension: 0.35,
+                            fill: true,
+                            borderWidth: 2.5
+                        },
+                        {
+                            label: 'Sales',
+                            data: daily.map(d => d.Sales.toFixed(2)),
+                            borderColor: '#ff3b30',
+                            backgroundColor: 'rgba(255, 59, 48, 0.06)',
+                            tension: 0.35,
+                            fill: true,
+                            borderWidth: 2.5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: true, position: 'top', align: 'end' } },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function renderCampaigns() {
+            const filtered = analysisData.campaigns;
+            const rows = filtered.map(c => `<tr class="row-${c.Status}"><td>${c.Campaign}</td><td>${c.Impressions.toLocaleString()}</td><td>${c.Clicks.toLocaleString()}</td><td>${c.CTR}%</td><td>${formatNumber(c.Spend)}</td><td>${c.SpendContribution}%</td><td>${formatNumber(c.Sales)}</td><td>${c.SalesContribution}%</td><td>${c.ACOS}%</td><td>${c.ROAS}x</td><td>${c.Orders}</td><td><span class="status ${c.Status}">${c.Status.toUpperCase()}</span></td><td>${c.Action}</td></tr>`).join('');
+            const total = { spend: filtered.reduce((s,c)=>s+c.Spend,0), sales: filtered.reduce((s,c)=>s+c.Sales,0), orders: filtered.reduce((s,c)=>s+c.Orders,0), clicks: filtered.reduce((s,c)=>s+c.Clicks,0), impressions: filtered.reduce((s,c)=>s+c.Impressions,0) };
+            const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
+            const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
+            const subtotalCTR = total.impressions > 0 ? (total.clicks / total.impressions * 100) : 0;
+            document.getElementById('cSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Campaigns</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Impressions</div><div class="summary-value">${formatNumber(total.impressions)}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">CTR %</div><div class="summary-value">${subtotalCTR.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div>`;
+            document.querySelector('#cTable tbody').innerHTML = rows;
+        }
+
+        function applyCFilters() {
+            const status = document.getElementById('cStatus').value;
+            const minROAS = parseFloat(document.getElementById('cMinROAS').value) || 0;
+            const maxACOS = parseFloat(document.getElementById('cMaxACOS').value) || 999;
+            const minSpend = parseFloat(document.getElementById('cMinSpend').value) || 0;
+            const filtered = analysisData.campaigns.filter(c => (!status || c.Status === status) && (minROAS === 0 || parseFloat(c.ROAS) >= minROAS) && (maxACOS === 999 || parseFloat(c.ACOS) <= maxACOS) && (minSpend === 0 || c.Spend >= minSpend));
+            const rows = filtered.map(c => `<tr class="row-${c.Status}"><td>${c.Campaign}</td><td>${c.Impressions.toLocaleString()}</td><td>${c.Clicks.toLocaleString()}</td><td>${c.CTR}%</td><td>${formatNumber(c.Spend)}</td><td>${c.SpendContribution}%</td><td>${formatNumber(c.Sales)}</td><td>${c.SalesContribution}%</td><td>${c.ACOS}%</td><td>${c.ROAS}x</td><td>${c.Orders}</td><td><span class="status ${c.Status}">${c.Status.toUpperCase()}</span></td><td>${c.Action}</td></tr>`).join('');
+            const total = { spend: filtered.reduce((s,c)=>s+c.Spend,0), sales: filtered.reduce((s,c)=>s+c.Sales,0), orders: filtered.reduce((s,c)=>s+c.Orders,0), clicks: filtered.reduce((s,c)=>s+c.Clicks,0), impressions: filtered.reduce((s,c)=>s+c.Impressions,0) };
+            const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
+            const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
+            const subtotalCTR = total.impressions > 0 ? (total.clicks / total.impressions * 100) : 0;
+            document.getElementById('cSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Campaigns</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Impressions</div><div class="summary-value">${formatNumber(total.impressions)}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">CTR %</div><div class="summary-value">${subtotalCTR.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div>`;
+            document.querySelector('#cTable tbody').innerHTML = rows;
+        }
+
+        function resetCFilters() {
+            document.getElementById('cStatus').value = '';
+            document.getElementById('cMinROAS').value = '';
+            document.getElementById('cMaxACOS').value = '';
+            document.getElementById('cMinSpend').value = '';
+            renderCampaigns();
+        }
+
+        function renderKeywords() {
+            if (!analysisData.keywords.length) return;
+            const filtered = analysisData.keywords.slice(0, 100);
+            const rows = filtered.map(k => `<tr class="row-${k.Status}"><td>${k.Keyword}</td><td>${k.Campaign}</td><td>${k.Clicks}</td><td>${formatNumber(k.Spend)}</td><td>${k.SpendContribution}%</td><td>${formatNumber(k.Sales)}</td><td>${k.SalesContribution}%</td><td>${k.ACOS}%</td><td>${k.ROAS}x</td><td>${k.CVR}%</td><td><span class="status ${k.Status}">${k.Status.toUpperCase()}</span></td><td>${k.Action}</td></tr>`).join('');
+            const total = { spend: filtered.reduce((s,k)=>s+k.Spend,0), sales: filtered.reduce((s,k)=>s+k.Sales,0), orders: filtered.reduce((s,k)=>s+k.Orders,0), clicks: filtered.reduce((s,k)=>s+k.Clicks,0) };
+            const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
+            const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
+            const subtotalCVR = total.clicks > 0 ? (total.orders / total.clicks * 100) : 0;
+            document.getElementById('kSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Keywords</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
+            document.querySelector('#kTable tbody').innerHTML = rows;
+        }
+
+        function applyKFilters() {
+            if (!analysisData || !analysisData.keywords) return;
+            const status = document.getElementById('kStatus').value;
+            const minROAS = parseFloat(document.getElementById('kMinROAS').value) || 0;
+            const maxACOS = parseFloat(document.getElementById('kMaxACOS').value) || 999;
+            const filtered = analysisData.keywords.slice(0, 100).filter(k => (!status || k.Status === status) && (minROAS === 0 || parseFloat(k.ROAS) >= minROAS) && (maxACOS === 999 || parseFloat(k.ACOS) <= maxACOS));
+            const rows = filtered.map(k => `<tr class="row-${k.Status}"><td>${k.Keyword}</td><td>${k.Campaign}</td><td>${k.Clicks}</td><td>${formatNumber(k.Spend)}</td><td>${k.SpendContribution}%</td><td>${formatNumber(k.Sales)}</td><td>${k.SalesContribution}%</td><td>${k.ACOS}%</td><td>${k.ROAS}x</td><td>${k.CVR}%</td><td><span class="status ${k.Status}">${k.Status.toUpperCase()}</span></td><td>${k.Action}</td></tr>`).join('');
+            const total = { spend: filtered.reduce((s,k)=>s+k.Spend,0), sales: filtered.reduce((s,k)=>s+k.Sales,0), orders: filtered.reduce((s,k)=>s+k.Orders,0), clicks: filtered.reduce((s,k)=>s+k.Clicks,0) };
+            const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
+            const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
+            const subtotalCVR = total.clicks > 0 ? (total.orders / total.clicks * 100) : 0;
+            document.getElementById('kSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Keywords</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
+            document.querySelector('#kTable tbody').innerHTML = rows;
+        }
+
+        function resetKFilters() {
+            document.getElementById('kStatus').value = '';
+            document.getElementById('kMinROAS').value = '';
+            document.getElementById('kMaxACOS').value = '';
+            renderKeywords();
+        }
+
+        function renderAsins() {
+            if (!analysisData.asins.length) return;
+            const filtered = analysisData.asins;
+            const rows = filtered.map(a => `<tr class="row-${a.Status}"><td>${a.ASIN}</td><td>${a.Title}</td><td>${formatNumber(a.Sales)}</td><td>${a.SalesContribution}%</td><td>${a.Orders}</td><td>${a.Clicks}</td><td>${formatNumber(a.Spend)}</td><td>${a.SpendContribution}%</td><td>${a.ACOS}%</td><td>${a.ROAS}x</td><td>${a.CVR}%</td><td><span class="status ${a.Status}">${a.Status.toUpperCase()}</span></td></tr>`).join('');
+            const total = { spend: filtered.reduce((s,a)=>s+a.Spend,0), sales: filtered.reduce((s,a)=>s+a.Sales,0), orders: filtered.reduce((s,a)=>s+a.Orders,0), clicks: filtered.reduce((s,a)=>s+a.Clicks,0) };
+            const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
+            const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
+            const subtotalCVR = total.clicks > 0 ? (total.orders / total.clicks * 100) : 0;
+            document.getElementById('aSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Products</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
+            document.querySelector('#aTable tbody').innerHTML = rows;
+        }
+
+        function applyAFilters() {
+            if (!analysisData || !analysisData.asins) return;
+            const status = document.getElementById('aStatus').value;
+            const minROAS = parseFloat(document.getElementById('aMinROAS').value) || 0;
+            const maxACOS = parseFloat(document.getElementById('aMaxACOS').value) || 999;
+            const filtered = analysisData.asins.filter(a => (!status || a.Status === status) && (minROAS === 0 || parseFloat(a.ROAS) >= minROAS) && (maxACOS === 999 || parseFloat(a.ACOS) <= maxACOS));
+            const rows = filtered.map(a => `<tr class="row-${a.Status}"><td>${a.ASIN}</td><td>${a.Title}</td><td>${formatNumber(a.Sales)}</td><td>${a.SalesContribution}%</td><td>${a.Orders}</td><td>${a.Clicks}</td><td>${formatNumber(a.Spend)}</td><td>${a.SpendContribution}%</td><td>${a.ACOS}%</td><td>${a.ROAS}x</td><td>${a.CVR}%</td><td><span class="status ${a.Status}">${a.Status.toUpperCase()}</span></td></tr>`).join('');
+            const total = { spend: filtered.reduce((s,a)=>s+a.Spend,0), sales: filtered.reduce((s,a)=>s+a.Sales,0), orders: filtered.reduce((s,a)=>s+a.Orders,0), clicks: filtered.reduce((s,a)=>s+a.Clicks,0) };
+            const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
+            const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
+            const subtotalCVR = total.clicks > 0 ? (total.orders / total.clicks * 100) : 0;
+            document.getElementById('aSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Products</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
+            document.querySelector('#aTable tbody').innerHTML = rows;
+        }
+
+        function resetAFilters() {
+            document.getElementById('aStatus').value = '';
+            document.getElementById('aMinROAS').value = '';
+            document.getElementById('aMaxACOS').value = '';
+            renderAsins();
+        }
+
+        function switchTab(event, tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+        }
+
+        function downloadExcelReport() {
+            if (!analysisData) return;
+            const wb = XLSX.utils.book_new();
+            const dashData = [['AMAZON PPC ANALYTICS'], ['Total Ad Sales (GMV)', analysisData.totals.gmvBaseline.toFixed(2)], ['Total Spend', analysisData.totals.spend.toFixed(2)], ['ACOS %', analysisData.totals.acos.toFixed(2)], ['ROAS', analysisData.totals.roas.toFixed(2)], ['Orders', analysisData.totals.orders], ['Clicks', analysisData.totals.clicks], ['Impressions', analysisData.totals.impressions], ['CTR %', analysisData.totals.ctr.toFixed(2)], ['CVR %', analysisData.totals.cvr.toFixed(2)], ['Date Range', `${document.getElementById('dateStart').value || ''} to ${document.getElementById('dateEnd').value || ''}`]];
+            const wsDash = XLSX.utils.aoa_to_sheet(dashData);
+            XLSX.utils.book_append_sheet(wb, wsDash, 'Dashboard');
+            const campData = [['Campaign', 'Impressions', 'Clicks', 'CTR %', 'Spend', 'Spend Cont. %', 'Sales', 'Sales Cont. %', 'ACOS %', 'ROAS', 'Orders', 'Status', 'Action']];
+            analysisData.campaigns.forEach(c => campData.push([c.Campaign, c.Impressions, c.Clicks, c.CTR, c.Spend, c.SpendContribution, c.Sales, c.SalesContribution, c.ACOS, c.ROAS, c.Orders, c.Status, c.Action]));
+            const wsCamp = XLSX.utils.aoa_to_sheet(campData);
+            XLSX.utils.book_append_sheet(wb, wsCamp, 'Campaigns');
+            const kwdData = [['Search Term', 'Campaign', 'Clicks', 'Spend', 'Spend Cont. %', 'Sales', 'Sales Cont. %', 'ACOS %', 'ROAS', 'CVR %', 'Status', 'Action']];
+            analysisData.keywords.forEach(k => kwdData.push([k.Keyword, k.Campaign, k.Clicks, k.Spend, k.SpendContribution, k.Sales, k.SalesContribution, k.ACOS, k.ROAS, k.CVR, k.Status, k.Action]));
+            const wsKwd = XLSX.utils.aoa_to_sheet(kwdData);
+            XLSX.utils.book_append_sheet(wb, wsKwd, 'Keywords');
+            const prodData = [['ASIN', 'Title', 'Sales', 'Sales Cont. %', 'Orders', 'Clicks', 'Spend', 'Spend Cont. %', 'ACOS %', 'ROAS', 'CVR %', 'Status']];
+            analysisData.asins.forEach(a => prodData.push([a.ASIN, a.Title, a.Sales, a.SalesContribution, a.Orders, a.Clicks, a.Spend, a.SpendContribution, a.ACOS, a.ROAS, a.CVR, a.Status]));
+            const wsProd = XLSX.utils.aoa_to_sheet(prodData);
+            XLSX.utils.book_append_sheet(wb, wsProd, 'Products');
+            if (analysisData.daily && analysisData.daily.length > 0) {
+                const dailyData = [['Date', 'Spend', 'Sales']];
+                analysisData.daily.forEach(d => dailyData.push([d.Date, d.Spend.toFixed(2), d.Sales.toFixed(2)]));
+                const wsDaily = XLSX.utils.aoa_to_sheet(dailyData);
+                XLSX.utils.book_append_sheet(wb, wsDaily, 'Daily Trend');
+            }
+            XLSX.writeFile(wb, `PPC_Analytics_${Date.now()}.xlsx`);
+            showSuccess('Downloaded');
+        }
+
+        function resetDashboard() {
+            productData = null;
+            keywordData = null;
+            catalogData = {};
+            rawCampaignRows = null;
+            rawKeywordRows = null;
+            fullDateRange = { start: null, end: null };
+            titleFetchInProgress = false;
+            if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+            if (trendChartInstance) { trendChartInstance.destroy(); trendChartInstance = null; }
+            document.getElementById('dashboard').classList.remove('show');
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('productFile').value = '';
+            document.getElementById('keywordFile').value = '';
+            document.getElementById('productFileName').textContent = '';
+            document.getElementById('keywordFileName').textContent = '';
+            document.getElementById('dateRangeBar').style.display = 'none';
+            document.getElementById('trendSection').style.display = 'none';
+            const banner = document.getElementById('titleFetchBanner');
+            if (banner) banner.style.display = 'none';
+            const retryBanner = document.getElementById('titleRetryBanner');
+            if (retryBanner) retryBanner.style.display = 'none';
+        }
+
+        function showSuccess(msg) {
+            const el = document.getElementById('successMsg');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 4000);
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }
+    </script>
+    </div>
+</body>
+</html>
