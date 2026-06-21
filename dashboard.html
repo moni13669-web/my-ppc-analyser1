@@ -6,6 +6,7 @@
     <title>Amazon PPC Analyser</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -1676,6 +1677,59 @@
         let chartInstance = null;
         let trendChartInstance = null;
         let titleFetchInProgress = false;
+        // ---------------- Auth + saved-report wiring ----------------
+        const SUPABASE_URL = "https://ymqlrqmldeqsswszyffe.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltcWxycW1sZGVxc3N3c3p5ZmZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5ODUzNzcsImV4cCI6MjA5NzU2MTM3N30._3NMYi_CKIbhamGzcIVyiQOFuUvbyPFvGf6fWVhpzeY";
+
+        if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+            document.body.innerHTML = '<div style="padding:48px;font-family:sans-serif;">Couldn\'t load required scripts. Please refresh.</div>';
+            throw new Error('Supabase JS library failed to load.');
+        }
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUserId = null;
+
+        async function initAuthAndMaybeReopen() {
+            const { data: sessionData } = await sb.auth.getSession();
+            if (!sessionData || !sessionData.session) {
+                window.location.href = '/index.html';
+                return;
+            }
+            currentUserId = sessionData.session.user.id;
+
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('reopen') === '1') {
+                const stored = sessionStorage.getItem('ppc_reopen_report');
+                if (stored) {
+                    try {
+                        analysisData = JSON.parse(stored);
+                        sessionStorage.removeItem('ppc_reopen_report');
+                        displayDashboard();
+                        showSuccess('Reopened your last report');
+                    } catch (e) {
+                        console.error('Failed to parse reopened report:', e);
+                    }
+                }
+            }
+        }
+
+        async function saveCurrentReport() {
+            if (!currentUserId || !analysisData) return;
+            try {
+                const { error } = await sb
+                    .from('user_reports')
+                    .upsert({
+                        user_id: currentUserId,
+                        report_data: analysisData,
+                        uploaded_at: new Date().toISOString()
+                    }, { onConflict: 'user_id' });
+                if (error) console.error('Failed to save report:', error.message);
+            } catch (e) {
+                console.error('Failed to save report:', e);
+            }
+        }
+
+        initAuthAndMaybeReopen();
 
         function launchDashboard() {
             const launchpad = document.getElementById('launchpadView');
@@ -1924,6 +1978,7 @@
                     runAnalysis(fullDateRange.start, fullDateRange.end);
                     displayDashboard();
                     showSuccess('Analysis complete');
+                    saveCurrentReport();
                     fetchProductTitles();
                 } catch (error) {
                     showError('Error: ' + error.message);
@@ -1982,7 +2037,8 @@
                 titleFetchInProgress = false;
                 if (banner) banner.style.display = 'none';
                 updateRetryBanner();
-            }).catch(() => {
+                saveCurrentReport();
+            }).catch(() => { {
                 titleFetchInProgress = false;
                 if (banner) banner.style.display = 'none';
                 updateRetryBanner();
