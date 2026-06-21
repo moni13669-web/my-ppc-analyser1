@@ -103,6 +103,183 @@
             color: var(--text-light);
         }
 
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .menu-wrap {
+            position: relative;
+        }
+
+        .menu-dots-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255,255,255,0.5);
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .menu-dots-btn:hover {
+            background: rgba(255,255,255,0.85);
+            border-color: var(--accent);
+        }
+        .menu-dots-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .menu-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 200px;
+            background: #fff;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: 0 16px 40px -16px rgba(11, 43, 38, 0.35);
+            padding: 6px;
+            display: none;
+            z-index: 50;
+        }
+        .menu-dropdown.show {
+            display: block;
+        }
+
+        .menu-item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-family: inherit;
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .menu-item:hover {
+            background: rgba(28, 78, 156, 0.08);
+        }
+        .menu-item-muted {
+            color: var(--text-light);
+        }
+        .menu-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 6px 4px;
+        }
+
+        /* ---------------- Modal system (About / How to use / Feedback) ---------------- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 43, 38, 0.45);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-box {
+            background: #fff;
+            border-radius: 20px;
+            max-width: 520px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 32px;
+            box-shadow: 0 40px 80px -30px rgba(11, 43, 38, 0.45);
+        }
+        .modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+        .modal-title {
+            font-family: var(--font-display, inherit);
+            font-size: 19px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        .modal-close {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--text-light);
+            padding: 4px;
+            border-radius: 6px;
+            line-height: 0;
+        }
+        .modal-close:hover { color: var(--text-dark); }
+        .modal-body {
+            font-size: 14px;
+            line-height: 1.65;
+            color: var(--text-dark);
+        }
+        .modal-body p { margin-bottom: 14px; }
+        .modal-body ul { margin: 0 0 14px 18px; }
+        .modal-body li { margin-bottom: 8px; }
+        .modal-body h4 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-light);
+            margin: 20px 0 8px;
+        }
+        .modal-body h4:first-child { margin-top: 0; }
+
+        .feedback-textarea {
+            width: 100%;
+            min-height: 130px;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-family: inherit;
+            font-size: 13.5px;
+            resize: vertical;
+            outline: none;
+        }
+        .feedback-textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(28, 78, 156, 0.1);
+        }
+        .feedback-charcount {
+            text-align: right;
+            font-size: 11.5px;
+            color: var(--text-light);
+            margin-top: 6px;
+        }
+        .feedback-charcount.limit-near { color: #c97200; }
+        .feedback-charcount.limit-over { color: #dc2626; }
+        .feedback-submit-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .feedback-status {
+            font-size: 13px;
+            margin-top: 12px;
+            display: none;
+        }
+        .feedback-status.show { display: block; }
+        .feedback-status.success { color: #1c7a3f; }
+        .feedback-status.error { color: #991b1b; }
+
         .content {
             flex: 1;
             overflow-y: auto;
@@ -978,6 +1155,12 @@
         @media (max-width: 768px) {
             .content { padding: 20px; }
             .kpi-grid { grid-template-columns: 1fr; }
+            .header { padding: 14px 18px; }
+            .header-title { font-size: 13px; }
+            .header-location { display: none; }
+            .modal-box { padding: 22px; max-height: 90vh; }
+            .modal-title { font-size: 17px; }
+            .menu-dropdown { min-width: 180px; }
         }
     </style>
     <style>
@@ -1360,7 +1543,101 @@
         <div class="main">
             <div class="header">
                 <div class="header-title">PPC Analytics</div>
-                <div class="header-location">India</div>
+                <div class="header-right">
+                    <div class="header-location">India</div>
+                    <div class="menu-wrap">
+                        <button class="menu-dots-btn" id="menuDotsBtn" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1.2"></circle><circle cx="12" cy="12" r="1.2"></circle><circle cx="12" cy="19" r="1.2"></circle></svg>
+                        </button>
+                        <div class="menu-dropdown" id="menuDropdown">
+                            <button class="menu-item" id="menuAboutBtn">About this product</button>
+                            <button class="menu-item" id="menuHowToBtn">How to use</button>
+                            <button class="menu-item" id="menuFeedbackBtn">Send feedback</button>
+                            <div class="menu-divider"></div>
+                            <button class="menu-item menu-item-muted" id="menuLogoutBtn">Log out</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== About modal ===== -->
+            <div class="modal-overlay" id="aboutModal">
+                <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="aboutModalTitle">
+                    <div class="modal-header">
+                        <div class="modal-title" id="aboutModalTitle">About PPC Analyser</div>
+                        <button class="modal-close" data-close-modal="aboutModal" aria-label="Close">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>PPC Analyser turns your raw Amazon Sponsored Products report into a clear picture of where your ad budget is actually going — and which campaigns, search terms and products are worth scaling, watching, or cutting.</p>
+
+                        <h4>What it does</h4>
+                        <ul>
+                            <li>Reads your Sponsored Products report and automatically calculates ACOS, ROAS, CTR and CVR for every campaign.</li>
+                            <li>Matches each Advertised ASIN to its real product title automatically, so you're never staring at a bare ASIN code.</li>
+                            <li>Breaks down search terms separately, so you can spot wasted spend on irrelevant keywords.</li>
+                            <li>Flags each campaign as Scale, Maintain, Reduce, or Pause based on its ROAS — so the next action is obvious, not buried in a spreadsheet.</li>
+                        </ul>
+
+                        <h4>Why it's worth using</h4>
+                        <ul>
+                            <li>No manual VLOOKUPs or pivot tables — upload and see the breakdown in seconds.</li>
+                            <li>Your last report is saved automatically, so you can pick up where you left off without re-uploading.</li>
+                            <li>Free to use, with no ads and no data sold to third parties.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== How to use modal ===== -->
+            <div class="modal-overlay" id="howToModal">
+                <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="howToModalTitle">
+                    <div class="modal-header">
+                        <div class="modal-title" id="howToModalTitle">How to use PPC Analyser</div>
+                        <button class="modal-close" data-close-modal="howToModal" aria-label="Close">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <h4>1. Get your reports from Amazon Ads</h4>
+                        <p>In Amazon Advertising Console, go to Measurement &amp; Reporting → create a Sponsored Products "Advertised product" report (and optionally a Search Term report) for the date range you want, then download it as .xlsx.</p>
+
+                        <h4>2. Upload here</h4>
+                        <p>Use the "Products Report" box for your campaign/advertised-product file, and the "Keywords Report" box for your search term file if you have one. The search term file is optional — campaign-level analysis works without it.</p>
+
+                        <h4>3. Click Analyze</h4>
+                        <p>The dashboard builds itself in a few seconds. Product titles for each ASIN are fetched automatically in the background — if a few don't resolve, use the "Retry failed titles" button that appears.</p>
+
+                        <h4>4. Read the breakdown</h4>
+                        <p>Use the date range buttons to zoom into a specific week or day. Switch between the Campaigns, Search Terms and Products tabs to drill into each level. Filter by status, ROAS or ACOS to quickly find campaigns that need attention.</p>
+
+                        <h4>5. Download or save</h4>
+                        <p>Download Report exports everything to an Excel file. Your analysis is also saved automatically to your account, so it's waiting for you next time on the Launchpad.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Feedback modal ===== -->
+            <div class="modal-overlay" id="feedbackModal">
+                <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="feedbackModalTitle">
+                    <div class="modal-header">
+                        <div class="modal-title" id="feedbackModalTitle">Send feedback</div>
+                        <button class="modal-close" data-close-modal="feedbackModal" aria-label="Close">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="margin-bottom:12px;">Found a bug, or have an idea to make this more useful? Tell us below.</p>
+                        <textarea class="feedback-textarea" id="feedbackText" maxlength="500" placeholder="What's working, what's not, what would you like to see..."></textarea>
+                        <div class="feedback-charcount" id="feedbackCharCount">0 / 500</div>
+                        <div class="feedback-status" id="feedbackStatus"></div>
+                        <div class="feedback-submit-row">
+                            <button class="btn btn-secondary" data-close-modal="feedbackModal">Cancel</button>
+                            <button class="btn btn-primary" id="feedbackSubmitBtn">Send feedback</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="content">
@@ -1677,6 +1954,7 @@
         let chartInstance = null;
         let trendChartInstance = null;
         let titleFetchInProgress = false;
+
         // ---------------- Auth + saved-report wiring ----------------
         const SUPABASE_URL = "https://ymqlrqmldeqsswszyffe.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltcWxycW1sZGVxc3N3c3p5ZmZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5ODUzNzcsImV4cCI6MjA5NzU2MTM3N30._3NMYi_CKIbhamGzcIVyiQOFuUvbyPFvGf6fWVhpzeY";
@@ -1689,7 +1967,11 @@
 
         let currentUserId = null;
 
+        // Runs before anything else: confirms the visitor is logged in, and if
+        // a saved report was handed off from the launchpad ("Open this report"),
+        // loads it straight into the dashboard instead of showing the upload step.
         async function initAuthAndMaybeReopen() {
+            async function initAuthAndMaybeReopen() {
             const { data: sessionData } = await sb.auth.getSession();
             if (!sessionData || !sessionData.session) {
                 window.location.href = '/index.html';
@@ -1713,6 +1995,9 @@
             }
         }
 
+        // Saves the current analysisData as this user's one stored report,
+        // overwriting whatever was saved before (by design — only the most
+        // recent report is kept, to keep storage simple and bounded).
         async function saveCurrentReport() {
             if (!currentUserId || !analysisData) return;
             try {
@@ -1730,6 +2015,103 @@
         }
 
         initAuthAndMaybeReopen();
+
+        // ---------------- Three-dot menu + modals ----------------
+        const menuDotsBtn = document.getElementById('menuDotsBtn');
+        const menuDropdown = document.getElementById('menuDropdown');
+
+        menuDotsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = menuDropdown.classList.toggle('show');
+            menuDotsBtn.setAttribute('aria-expanded', isOpen);
+        });
+        document.addEventListener('click', () => {
+            menuDropdown.classList.remove('show');
+            menuDotsBtn.setAttribute('aria-expanded', 'false');
+        });
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('show');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        document.getElementById('menuAboutBtn').addEventListener('click', () => openModal('aboutModal'));
+        document.getElementById('menuHowToBtn').addEventListener('click', () => openModal('howToModal'));
+        document.getElementById('menuFeedbackBtn').addEventListener('click', () => openModal('feedbackModal'));
+        document.getElementById('menuLogoutBtn').addEventListener('click', async () => {
+            await sb.auth.signOut();
+            window.location.href = '/index.html';
+        });
+
+        document.querySelectorAll('[data-close-modal]').forEach(btn => {
+            btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close-modal')));
+        });
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) overlay.classList.remove('show');
+            });
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+            }
+        });
+
+        // ---------------- Feedback submission ----------------
+        const FEEDBACK_MAX_LEN = 500;
+        const feedbackText = document.getElementById('feedbackText');
+        const feedbackCharCount = document.getElementById('feedbackCharCount');
+        const feedbackStatus = document.getElementById('feedbackStatus');
+        const feedbackSubmitBtn = document.getElementById('feedbackSubmitBtn');
+
+        feedbackText.addEventListener('input', () => {
+            const len = feedbackText.value.length;
+            feedbackCharCount.textContent = `${len} / ${FEEDBACK_MAX_LEN}`;
+            feedbackCharCount.classList.toggle('limit-near', len >= FEEDBACK_MAX_LEN - 40 && len < FEEDBACK_MAX_LEN);
+            feedbackCharCount.classList.toggle('limit-over', len >= FEEDBACK_MAX_LEN);
+        });
+
+        feedbackSubmitBtn.addEventListener('click', async () => {
+            const message = feedbackText.value.trim();
+            if (!message) {
+                feedbackStatus.textContent = 'Please write something before sending.';
+                feedbackStatus.className = 'feedback-status show error';
+                return;
+            }
+            if (!currentUserId) {
+                feedbackStatus.textContent = 'You need to be logged in to send feedback.';
+                feedbackStatus.className = 'feedback-status show error';
+                return;
+            }
+
+            feedbackSubmitBtn.disabled = true;
+            feedbackSubmitBtn.textContent = 'Sending…';
+
+            try {
+                const { error } = await sb
+                    .from('feedback')
+                    .insert({ user_id: currentUserId, message: message.slice(0, FEEDBACK_MAX_LEN) });
+
+                if (error) {
+                    feedbackStatus.textContent = 'Could not send feedback. Please try again.';
+                    feedbackStatus.className = 'feedback-status show error';
+                } else {
+                    feedbackStatus.textContent = 'Thanks — feedback sent.';
+                    feedbackStatus.className = 'feedback-status show success';
+                    feedbackText.value = '';
+                    feedbackCharCount.textContent = `0 / ${FEEDBACK_MAX_LEN}`;
+                    setTimeout(() => closeModal('feedbackModal'), 1400);
+                }
+            } catch (e) {
+                feedbackStatus.textContent = 'Could not send feedback. Please try again.';
+                feedbackStatus.className = 'feedback-status show error';
+            } finally {
+                feedbackSubmitBtn.disabled = false;
+                feedbackSubmitBtn.textContent = 'Send feedback';
+            }
+        });
 
         function launchDashboard() {
             const launchpad = document.getElementById('launchpadView');
