@@ -1970,7 +1970,6 @@
         // Runs before anything else: confirms the visitor is logged in, and if
         // a saved report was handed off from the launchpad ("Open this report"),
         // loads it straight into the dashboard instead of showing the upload step.
-        async function initAuthAndMaybeReopen() {
             async function initAuthAndMaybeReopen() {
             const { data: sessionData } = await sb.auth.getSession();
             if (!sessionData || !sessionData.session) {
