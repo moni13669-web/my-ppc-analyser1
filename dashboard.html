@@ -2032,13 +2032,14 @@
         function openModal(id) {
             document.getElementById(id).classList.add('show');
         }
-        function closeModal(id) {
-            document.getElementById(id).classList.remove('show');
-        }
+        function closeMenuDropdown() {
+    menuDropdown.classList.remove('show');
+    menuDotsBtn.setAttribute('aria-expanded', 'false');
+}
 
-        document.getElementById('menuAboutBtn').addEventListener('click', () => openModal('aboutModal'));
-        document.getElementById('menuHowToBtn').addEventListener('click', () => openModal('howToModal'));
-        document.getElementById('menuFeedbackBtn').addEventListener('click', () => openModal('feedbackModal'));
+document.getElementById('menuAboutBtn').addEventListener('click', () => { closeMenuDropdown(); openModal('aboutModal'); });
+document.getElementById('menuHowToBtn').addEventListener('click', () => { closeMenuDropdown(); openModal('howToModal'); });
+document.getElementById('menuFeedbackBtn').addEventListener('click', () => { closeMenuDropdown(); openModal('feedbackModal'); });
         document.getElementById('menuLogoutBtn').addEventListener('click', async () => {
             await sb.auth.signOut();
             window.location.href = '/index.html';
