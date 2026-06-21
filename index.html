@@ -522,7 +522,7 @@
     throw new Error('Supabase JS library failed to load.');
   }
 
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // ---------------- Tab switching ----------------
   const tabLogin = document.getElementById('tabLogin');
@@ -550,7 +550,7 @@
 
   // ---------------- Google OAuth ----------------
   async function signInWithGoogle(){
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin + '/launchpad.html' }
     });
@@ -570,7 +570,7 @@
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await sb.auth.signInWithPassword({ email, password });
 
     btn.disabled = false;
     btn.textContent = 'Log in';
@@ -593,7 +593,7 @@
     const email = document.getElementById('signupEmail').value.trim();
     const password = document.getElementById('signupPassword').value;
 
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await sb.auth.signUp({ email, password });
 
     btn.disabled = false;
     btn.textContent = 'Create account';
