@@ -5,249 +5,317 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PPC Analyser — Launchpad</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink: #0b1320;
-    --ink-2: #111c2e;
-    --panel: #15233a;
-    --hairline: rgba(255,255,255,0.08);
-    --paper: #f4f1ea;
-    --gold: #e8a33d;
-    --gold-dim: #8a6a35;
-    --mint: #4fd1ae;
+    --bg-1: #EAF7F1;
+    --bg-2: #E3EEFC;
+    --ink: #0B2B26;
+    --ink-soft: #4B635E;
+    --surface: rgba(255, 255, 255, 0.86);
+    --glass-hi: rgba(255, 255, 255, 0.62);
+    --glass-mid: rgba(255, 255, 255, 0.4);
+    --glass-border: rgba(255, 255, 255, 0.55);
+    --border: rgba(11, 43, 38, 0.1);
+    --teal: #0F7A6E;
+    --blue: #1C4E9C;
+    --amber: #FF8A3D;
     --red: #e8674a;
-    --ink-text: #e9edf3;
-    --dim-text: #8fa0b8;
-    --font-display: 'Fraunces', Georgia, serif;
-    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
   }
 
   *{ box-sizing:border-box; margin:0; padding:0; }
 
   html,body{
-    background: linear-gradient(180deg, var(--ink) 0%, var(--ink-2) 100%);
-    color: var(--ink-text);
+    min-height: 100vh;
+    background: linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 100%);
+    color: var(--ink);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
-    min-height: 100vh;
+    overflow-x: hidden;
   }
 
   a{ color: inherit; text-decoration:none; }
   button{ font-family: inherit; }
 
+  .blobs{
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .blob{ position: absolute; border-radius: 50%; filter: blur(75px); opacity: 0.5; }
+  .blob-1{ width: 420px; height: 420px; background: #BFEEE2; top: -160px; left: -120px; animation: drift1 30s ease-in-out infinite alternate; }
+  .blob-2{ width: 460px; height: 460px; background: #CFE0FB; bottom: -180px; right: -140px; animation: drift2 34s ease-in-out infinite alternate; }
+  .blob-3{ width: 280px; height: 280px; background: #FFE3C9; top: 30%; right: 10%; opacity: 0.32; animation: drift1 24s ease-in-out infinite alternate-reverse; }
+  @keyframes drift1{ from{ transform: translate(0,0); } to{ transform: translate(40px,30px); } }
+  @keyframes drift2{ from{ transform: translate(0,0); } to{ transform: translate(-30px,-40px); } }
+
   .topbar{
+    position: relative;
+    z-index: 1;
     display:flex;
     align-items:center;
     justify-content: space-between;
-    padding: 22px 40px;
-    border-bottom: 1px solid var(--hairline);
+    padding: 20px 40px;
+    background: var(--glass-mid);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.7) inset, 0 12px 30px -22px rgba(11, 43, 38, 0.18);
   }
   .brand{
     display:flex;
     align-items:center;
     gap:10px;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    letter-spacing: 0.12em;
-    color: var(--dim-text);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    color: var(--ink);
     text-transform: uppercase;
   }
   .brand-mark{
-    width:8px; height:8px; border-radius:2px;
-    background: var(--gold);
-    box-shadow: 0 0 12px rgba(232,163,61,0.7);
+    width:9px; height:9px; border-radius:3px;
+    background: linear-gradient(135deg, var(--teal), var(--blue));
   }
   .user-area{
     display:flex;
     align-items:center;
     gap:18px;
     font-size: 13.5px;
-    color: var(--dim-text);
+    color: var(--ink-soft);
   }
   .user-email{
     font-family: var(--font-mono);
     font-size: 12.5px;
   }
   .logout-btn{
-    background: transparent;
-    border: 1px solid var(--hairline);
-    color: var(--dim-text);
-    padding: 7px 16px;
+    background: var(--glass-hi);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    color: var(--ink-soft);
+    padding: 8px 18px;
     border-radius: 999px;
     font-size: 12.5px;
+    font-weight: 600;
     cursor: pointer;
-    transition: border-color .15s, color .15s;
+    transition: border-color .15s, color .15s, background .15s;
   }
-  .logout-btn:hover{ border-color: var(--gold-dim); color: var(--ink-text); }
-  .logout-btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  .logout-btn:hover{ border-color: var(--teal); color: var(--ink); background: rgba(255,255,255,0.85); }
+  .logout-btn:focus-visible{ outline: 2px solid var(--blue); outline-offset: 2px; }
 
   .stage{
+    position: relative;
+    z-index: 1;
     max-width: 880px;
     margin: 0 auto;
     padding: 64px 32px 80px;
   }
 
   .eyebrow{
-    font-family: var(--font-mono);
-    font-size: 12.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 16px;
-    display:flex;
+    display:inline-flex;
     align-items:center;
-    gap:10px;
-  }
-  .eyebrow::before{
-    content:"";
-    width:22px; height:1px;
-    background: var(--gold-dim);
+    gap:8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal);
+    background: rgba(15, 122, 110, 0.08);
+    border: 1px solid rgba(15, 122, 110, 0.2);
+    padding: 7px 14px;
+    border-radius: 999px;
+    margin-bottom: 20px;
   }
 
   h1{
     font-family: var(--font-display);
-    font-weight: 600;
-    font-size: clamp(28px, 4vw, 40px);
-    line-height: 1.1;
-    color: #fff;
+    font-weight: 700;
+    font-size: clamp(28px, 4vw, 38px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--ink);
     margin-bottom: 12px;
+  }
+  h1 .grad{
+    background: linear-gradient(100deg, var(--teal), var(--blue));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .stage-sub{
-    font-size: 15.5px;
-    color: var(--dim-text);
+    font-size: 15px;
+    color: var(--ink-soft);
     margin-bottom: 44px;
     max-width: 60ch;
+    line-height: 1.6;
   }
 
   .report-card{
-    border: 1px solid var(--hairline);
-    border-radius: 16px;
-    background: rgba(255,255,255,0.03);
-    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    background: var(--glass-mid);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    border-radius: 28px;
+    padding: 36px;
     margin-bottom: 24px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 24px 60px -34px rgba(11, 43, 38, 0.3);
+  }
+  .report-card::before{
+    content: '';
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(15, 122, 110, 0.14), transparent 70%);
+    top: -130px;
+    right: -90px;
+    pointer-events: none;
   }
   .report-card-head{
+    position: relative;
     display:flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 26px;
     flex-wrap: wrap;
   }
   .report-card-title{
     font-family: var(--font-display);
-    font-size: 21px;
-    font-weight: 600;
-    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
   }
   .report-card-date{
     font-family: var(--font-mono);
     font-size: 12px;
-    color: var(--dim-text);
+    color: var(--ink-soft);
     margin-top: 4px;
   }
   .freshness-tag{
     font-family: var(--font-mono);
     font-size: 11px;
     letter-spacing: 0.04em;
-    padding: 5px 12px;
+    padding: 6px 13px;
     border-radius: 999px;
     white-space: nowrap;
   }
-  .freshness-fresh{ background: rgba(79,209,174,0.14); color: var(--mint); }
+  .freshness-fresh{ background: rgba(15, 122, 110, 0.12); color: var(--teal); }
   .freshness-stale{ background: rgba(232,103,74,0.13); color: var(--red); }
 
   .stat-row{
+    position: relative;
     display:grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
+    gap: 14px;
     margin-bottom: 28px;
   }
   .stat{
-    background: rgba(255,255,255,0.025);
-    border: 1px solid var(--hairline);
-    border-radius: 10px;
+    background: var(--glass-hi);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
     padding: 14px 16px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset;
   }
   .stat-label{
     font-size: 10.5px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--dim-text);
+    color: var(--ink-soft);
     margin-bottom: 6px;
   }
   .stat-value{
     font-family: var(--font-mono);
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 600;
-    color: var(--ink-text);
+    color: var(--ink);
   }
-  .stat-value.good{ color: var(--mint); }
+  .stat-value.good{ color: var(--teal); }
   .stat-value.bad{ color: var(--red); }
 
   .card-actions{
+    position: relative;
     display:flex;
     gap: 12px;
     flex-wrap: wrap;
   }
   .btn{
-    padding: 12px 22px;
-    border-radius: 9px;
-    font-size: 14px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-size: 13.5px;
     font-weight: 700;
     cursor: pointer;
     border: none;
-    transition: transform .1s, background .15s, border-color .15s;
+    transition: transform .15s, box-shadow .15s, background .15s;
   }
   .btn:active{ transform: scale(0.98); }
-  .btn:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
-  .btn-gold{
-    background: linear-gradient(100deg, var(--gold), #d4892f);
-    color: #1c1306;
+  .btn:focus-visible{ outline: 2px solid var(--blue); outline-offset: 2px; }
+  .btn-primary{
+    background: linear-gradient(100deg, var(--teal), var(--blue));
+    color: #fff;
+    box-shadow: 0 10px 20px -10px rgba(15, 80, 90, 0.5);
   }
-  .btn-gold:hover{ filter: brightness(1.08); }
+  .btn-primary:hover{ transform: translateY(-1px); box-shadow: 0 14px 24px -10px rgba(15, 80, 90, 0.6); }
   .btn-ghost{
-    background: transparent;
-    border: 1px solid var(--hairline);
-    color: var(--ink-text);
+    background: var(--glass-hi);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    color: var(--ink);
   }
-  .btn-ghost:hover{ border-color: var(--gold-dim); }
+  .btn-ghost:hover{ background: rgba(255,255,255,0.85); border-color: var(--teal); }
 
   .empty-state{
-    border: 1px dashed var(--hairline);
-    border-radius: 16px;
-    padding: 56px 32px;
+    position: relative;
+    background: var(--glass-mid);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px dashed var(--border);
+    border-radius: 28px;
+    padding: 60px 32px;
     text-align: center;
   }
   .empty-icon{
-    width: 46px; height: 46px;
+    width: 48px; height: 48px;
     margin: 0 auto 20px;
-    opacity: 0.5;
+    color: var(--teal);
+    opacity: 0.55;
   }
   .empty-title{
     font-family: var(--font-display);
     font-size: 19px;
-    font-weight: 600;
-    color: #fff;
+    font-weight: 700;
+    color: var(--ink);
     margin-bottom: 8px;
   }
   .empty-sub{
     font-size: 14px;
-    color: var(--dim-text);
+    color: var(--ink-soft);
     margin-bottom: 26px;
     max-width: 42ch;
     margin-left: auto;
     margin-right: auto;
+    line-height: 1.6;
   }
 
   .loading-stage{
+    position: relative;
+    z-index: 1;
     display:flex;
     align-items:center;
     justify-content:center;
     min-height: 60vh;
-    color: var(--dim-text);
+    color: var(--ink-soft);
     font-family: var(--font-mono);
     font-size: 13px;
   }
@@ -256,14 +324,25 @@
     .topbar{ padding: 16px 20px; }
     .stage{ padding: 40px 18px 60px; }
     .stat-row{ grid-template-columns: repeat(2, 1fr); }
-    .report-card{ padding: 22px; }
+    .report-card{ padding: 24px; }
+    .empty-state{ padding: 44px 22px; }
     .user-email{ display:none; }
     .card-actions{ flex-direction: column; }
     .card-actions .btn{ width: 100%; }
   }
+
+  @media (prefers-reduced-motion: reduce){
+    .blob{ animation: none; }
+  }
 </style>
 </head>
 <body>
+
+<div class="blobs" aria-hidden="true">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
 
 <div class="topbar">
   <div class="brand">
@@ -320,7 +399,7 @@
   function renderEmptyState(){
     document.getElementById('reportArea').innerHTML = `
       <div class="empty-state">
-        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="#8fa0b8" stroke-width="1.5">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
           <line x1="9" y1="13" x2="15" y2="13"></line>
@@ -328,7 +407,7 @@
         </svg>
         <div class="empty-title">No report yet</div>
         <p class="empty-sub">Upload your Sponsored Products report to see ACOS, ROAS and spend broken down by campaign, search term and product.</p>
-        <a href="/dashboard.html"><button class="btn btn-gold">Upload your first report</button></a>
+        <a href="/dashboard.html"><button class="btn btn-primary">Upload your first report</button></a>
       </div>
     `;
   }
@@ -368,7 +447,7 @@
           <div class="stat"><div class="stat-label">ROAS</div><div class="stat-value ${parseFloat(roas) > 2 ? 'good' : ''}">${roas}</div></div>
         </div>
         <div class="card-actions">
-          <button class="btn btn-gold" id="openReportBtn">Open this report</button>
+          <button class="btn btn-primary" id="openReportBtn">Open this report</button>
           <button class="btn btn-ghost" id="uploadNewBtn">Upload a new report</button>
         </div>
       </div>
@@ -386,6 +465,7 @@
   }
 
   async function init(){
+    
     const { data: sessionData } = await sb.auth.getSession();
     if (!sessionData || !sessionData.session) {
       window.location.href = '/index.html';
@@ -394,7 +474,7 @@
     const user = sessionData.session.user;
     document.getElementById('userEmail').textContent = user.email || '';
     const firstName = (user.email || '').split('@')[0];
-    document.getElementById('greeting').textContent = `Welcome back, ${firstName}`;
+    document.getElementById('greeting').innerHTML = `Welcome back, <span class="grad">${escapeHtml(firstName)}</span>`;
 
     const { data: reportRow, error } = await sb
       .from('user_reports')
