@@ -2071,7 +2071,10 @@
                         }));
                     }
 
-                    const allDates = rawCampaignRows.map(r => r.Date).filter(Boolean).sort();
+                    const allDates = rawCampaignRows.map(r => r.Date)
+    .concat(rawKeywordRows.map(r => r.Date))
+    .filter(Boolean)
+    .sort();
                     fullDateRange.start = allDates.length ? allDates[0] : null;
                     fullDateRange.end = allDates.length ? allDates[allDates.length - 1] : null;
 
@@ -2529,8 +2532,15 @@
             renderCampaigns();
         }
 
-        function renderKeywords() {
-            if (!analysisData.keywords.length) return;
+function renderKeywords() {
+            if (!analysisData.keywords.length) {
+                document.getElementById('kSummary').innerHTML = '';
+                document.querySelector('#kTable tbody').innerHTML =
+                    '<tr><td colspan="12" style="text-align:center; padding: 32px; color: var(--text-light);">' +
+                    'No search term data in the selected date range. Your Search Term report may cover different dates than your Products report — try selecting "All Time" or widening the date range.' +
+                    '</td></tr>';
+                return;
+            }
             const filtered = analysisData.keywords.slice(0, 100);
             const rows = filtered.map(k => `<tr class="row-${k.Status}"><td>${k.Keyword}</td><td>${k.Campaign}</td><td>${k.Clicks}</td><td>${formatNumber(k.Spend)}</td><td>${k.SpendContribution}%</td><td>${formatNumber(k.Sales)}</td><td>${k.SalesContribution}%</td><td>${k.ACOS}%</td><td>${k.ROAS}x</td><td>${k.CVR}%</td><td><span class="status ${k.Status}">${k.Status.toUpperCase()}</span></td><td>${k.Action}</td></tr>`).join('');
             const total = { spend: filtered.reduce((s,k)=>s+k.Spend,0), sales: filtered.reduce((s,k)=>s+k.Sales,0), orders: filtered.reduce((s,k)=>s+k.Orders,0), clicks: filtered.reduce((s,k)=>s+k.Clicks,0) };
