@@ -344,6 +344,69 @@
   .btn-primary:disabled{ opacity: 0.5; cursor: default; }
   .btn-primary:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
 
+  .forgot-link{
+    display: block;
+    margin: 12px auto 0;
+    background: transparent;
+    border: none;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #6b6657;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: text-decoration-color .15s, color .15s;
+  }
+  .forgot-link:hover{ color: #1c1a16; text-decoration-color: #1c1a16; }
+  .forgot-link:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  .forgot-panel{
+    display: none;
+    margin-top: 18px;
+    padding: 18px;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid #ddd8c9;
+    border-radius: 10px;
+  }
+  .forgot-panel.show{ display: block; }
+  .forgot-panel-title{
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .forgot-panel-sub{
+    font-size: 12.5px;
+    color: #6b6657;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+  .forgot-panel-actions{
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .forgot-panel-actions .btn-primary{
+    margin-top: 0;
+    flex: 1;
+  }
+  .btn-ghost-small{
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 9px;
+    border: 1.5px solid #d8d3c4;
+    background: #fff;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    color: #1c1a16;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .btn-ghost-small:hover{ border-color: #b8b09a; }
+
   .form-msg{
     margin-top: 14px;
     font-size: 13px;
@@ -362,6 +425,12 @@
     color: #a39d8a;
     line-height: 1.5;
   }
+  .fine a{
+    color: #6b6657;
+    font-weight: 600;
+    text-decoration: underline;
+  }
+  .fine a:hover{ color: #1c1a16; }
 
   .pane{ display:none; }
   .pane.active{ display:block; }
@@ -477,6 +546,22 @@
           <button type="submit" class="btn-primary" id="loginSubmitBtn">Log in</button>
         </form>
 
+        <button type="button" class="forgot-link" id="forgotPasswordLink">Forgot password?</button>
+
+        <div class="forgot-panel" id="forgotPanel">
+          <div class="forgot-panel-title">Reset your password</div>
+          <p class="forgot-panel-sub">Enter your email and we'll send you a reset link.</p>
+          <div class="field">
+            <label for="forgotEmail">Email</label>
+            <input type="email" id="forgotEmail" autocomplete="email">
+          </div>
+          <div class="forgot-panel-actions">
+            <button type="button" class="btn-ghost-small" id="forgotCancelBtn">Cancel</button>
+            <button type="button" class="btn-primary" id="forgotSendBtn">Send reset link</button>
+          </div>
+          <div class="form-msg" id="forgotMsg"></div>
+        </div>
+
         <div class="form-msg" id="loginMsg"></div>
       </div>
 
@@ -505,7 +590,23 @@
         </form>
 
         <div class="form-msg" id="signupMsg"></div>
-        <div class="fine">By signing up, you agree this tool reads only the report you choose to upload.</div>
+        <div class="fine">By signing up, you agree this tool reads only the report you choose to upload. See our <a href="/privacy.html">Privacy Policy</a> and <a href="/terms.html">Terms of Service</a>.</div>
+      </div>
+
+      <!-- RECOVERY PANE: shown only when arriving via a password reset email link -->
+      <div class="pane" id="paneRecovery">
+        <div class="auth-title">Set a new password</div>
+        <div class="auth-sub">Choose a new password for your account.</div>
+
+        <form id="formRecovery">
+          <div class="field">
+            <label for="recoveryPassword">New password</label>
+            <input type="password" id="recoveryPassword" autocomplete="new-password" minlength="6" required>
+          </div>
+          <button type="submit" class="btn-primary" id="recoverySubmitBtn">Update password</button>
+        </form>
+
+        <div class="form-msg" id="recoveryMsg"></div>
       </div>
 
     </div>
@@ -587,6 +688,49 @@
     window.location.href = '/launchpad.html';
   });
 
+  // ---------------- Forgot password ----------------
+  const forgotPanel = document.getElementById('forgotPanel');
+  const forgotLink = document.getElementById('forgotPasswordLink');
+  const forgotCancelBtn = document.getElementById('forgotCancelBtn');
+  const forgotSendBtn = document.getElementById('forgotSendBtn');
+  const forgotMsg = document.getElementById('forgotMsg');
+
+  forgotLink.addEventListener('click', () => {
+    forgotPanel.classList.add('show');
+    // Pre-fill with whatever the person already typed in the login email field.
+    const loginEmailVal = document.getElementById('loginEmail').value.trim();
+    if (loginEmailVal) document.getElementById('forgotEmail').value = loginEmailVal;
+  });
+
+  forgotCancelBtn.addEventListener('click', () => {
+    forgotPanel.classList.remove('show');
+    forgotMsg.className = 'form-msg';
+  });
+
+  forgotSendBtn.addEventListener('click', async () => {
+    const email = document.getElementById('forgotEmail').value.trim();
+    if (!email){
+      setMsg(forgotMsg, 'Enter your email first.', 'error');
+      return;
+    }
+
+    forgotSendBtn.disabled = true;
+    forgotSendBtn.textContent = 'Sending…';
+
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/index.html'
+    });
+
+    forgotSendBtn.disabled = false;
+    forgotSendBtn.textContent = 'Send reset link';
+
+    if (error){
+      setMsg(forgotMsg, error.message, 'error');
+      return;
+    }
+    setMsg(forgotMsg, 'Check your email for a reset link.', 'success');
+  });
+
   // ---------------- Email signup ----------------
   document.getElementById('formSignup').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -610,10 +754,49 @@
     setMsg(msg, 'Account created. Check your email to confirm, then log in.', 'success');
   });
 
+  // ---------------- Password recovery flow ----------------
+  // When the person clicks the reset-password link from their email, Supabase
+  // fires this event with a temporary recovery session. We show a "set new
+  // password" form instead of treating them as a normal logged-in visitor.
+  let inRecoveryMode = false;
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      inRecoveryMode = true;
+      document.getElementById('paneLogin').classList.remove('active');
+      document.getElementById('paneSignup').classList.remove('active');
+      document.getElementById('paneRecovery').classList.add('active');
+      document.querySelector('.tabs').style.display = 'none';
+    }
+  });
+
+  document.getElementById('formRecovery').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('recoverySubmitBtn');
+    const msg = document.getElementById('recoveryMsg');
+    const newPassword = document.getElementById('recoveryPassword').value;
+
+    btn.disabled = true;
+    btn.textContent = 'Updating…';
+
+    const { error } = await sb.auth.updateUser({ password: newPassword });
+
+    btn.disabled = false;
+    btn.textContent = 'Update password';
+
+    if (error){
+      setMsg(msg, error.message, 'error');
+      return;
+    }
+    setMsg(msg, 'Password updated. Redirecting…', 'success');
+    setTimeout(() => { window.location.href = '/launchpad.html'; }, 1200);
+  });
+
   // ---------------- If already logged in, skip straight to launchpad ----------------
   // (Redirect temporarily disabled in this preview-safe copy only.)
   /*
   (async () => {
+    await new Promise(r => setTimeout(r, 150));
+    if (inRecoveryMode) return;
     const { data } = await sb.auth.getSession();
     if (data && data.session) {
       window.location.href = '/launchpad.html';
