@@ -916,6 +916,33 @@
             max-width: 100%;
         }
 
+        /* Search Terms tab's filter bar spans full width so the date range
+           block can sit visually separated on the right side. */
+        #keywords .filter-section {
+            width: 100%;
+        }
+        .keyword-daterange {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            margin-left: auto;
+            padding-left: 16px;
+            border-left: 1px solid var(--border-color);
+        }
+        .keyword-daterange .filter-group input[type="date"] {
+            min-width: 140px;
+        }
+        .keyword-daterange-quick {
+            display: flex;
+            gap: 6px;
+        }
+        .keyword-daterange-hint {
+            font-size: 11px;
+            color: var(--text-light);
+            margin: -8px 0 14px 2px;
+        }
+
         .filter-label {
             width: 100%;
             font-size: 12px;
@@ -1227,6 +1254,14 @@
             .modal-box { padding: 22px; max-height: 90vh; }
             .modal-title { font-size: 17px; }
             .side-drawer { width: 250px; }
+            .keyword-daterange {
+                margin-left: 0;
+                padding-left: 0;
+                border-left: none;
+                border-top: 1px solid var(--border-color);
+                padding-top: 14px;
+                width: 100%;
+            }
         }
     </style>
     <style>
@@ -1597,9 +1632,28 @@
                                 <div class="filter-group">
                                     <button class="filter-btn" onclick="resetKFilters()">Reset</button>
                                 </div>
+                                <div class="keyword-daterange" id="keywordDateRangeBar" style="display:none;">
+                                    <div class="filter-group">
+                                        <label>Search Term Start</label>
+                                        <input type="date" id="kDateStart" onchange="applyKeywordDateRange()">
+                                    </div>
+                                    <div class="filter-group">
+                                        <label>Search Term End</label>
+                                        <input type="date" id="kDateEnd" onchange="applyKeywordDateRange()">
+                                    </div>
+                                    <div class="filter-group">
+                                        <label>&nbsp;</label>
+                                        <div class="keyword-daterange-quick">
+                                            <button class="quick-btn" onclick="setKeywordQuickRange('7d', this)">7D</button>
+                                            <button class="quick-btn" onclick="setKeywordQuickRange('30d', this)">30D</button>
+                                            <button class="quick-btn active" onclick="setKeywordQuickRange('all', this)">All</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+                            <div class="keyword-daterange-hint" id="kDateRangeHint"></div>
                             <div style="background: #f5f7ff; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; color: #0d47a1; border-left: 3px solid var(--accent);">
-                                Top 100 search terms. Download report for full data.
+                                Top 100 search terms. Download report for full data. Search Term data uses its own date range, independent of the Campaigns/Products range above.
                             </div>
                             <div class="summary" id="kSummary"></div>
                             <div class="table-wrapper">
@@ -1688,6 +1742,8 @@
         let chartInstance = null;
         let trendChartInstance = null;
         let titleFetchInProgress = false;
+        let keywordDateRange = { start: null, end: null };
+        let keywordFullDateRange = { start: null, end: null };
 
         // ---------------- Auth + saved-report wiring ----------------
         const SUPABASE_URL = "https://ymqlrqmldeqsswszyffe.supabase.co";
@@ -1705,7 +1761,7 @@
         // a saved report was handed off from the launchpad ("Open this report"),
         // loads it straight into the dashboard instead of showing the upload step.
         async function initAuthAndMaybeReopen() {
-                       const { data: sessionData } = await sb.auth.getSession();
+            const { data: sessionData } = await sb.auth.getSession();
             if (!sessionData || !sessionData.session) {
                 window.location.href = '/index.html';
                 return;
@@ -1720,6 +1776,13 @@
                         analysisData = JSON.parse(stored);
                         sessionStorage.removeItem('ppc_reopen_report');
                         displayDashboard();
+                        // Raw rows aren't persisted (only the final summary is), so the
+                        // date-range pickers can't re-filter anything on a reopened
+                        // report — hide them rather than show controls that do nothing.
+                        const dBar = document.getElementById('dateRangeBar');
+                        const kBar = document.getElementById('keywordDateRangeBar');
+                        if (dBar) dBar.style.display = 'none';
+                        if (kBar) kBar.style.display = 'none';
                         showSuccess('Reopened your last report');
                     } catch (e) {
                         console.error('Failed to parse reopened report:', e);
@@ -2071,10 +2134,7 @@
                         }));
                     }
 
-                    const allDates = rawCampaignRows.map(r => r.Date)
-    .concat(rawKeywordRows.map(r => r.Date))
-    .filter(Boolean)
-    .sort();
+                    const allDates = rawCampaignRows.map(r => r.Date).filter(Boolean).sort();
                     fullDateRange.start = allDates.length ? allDates[0] : null;
                     fullDateRange.end = allDates.length ? allDates[allDates.length - 1] : null;
 
@@ -2093,7 +2153,30 @@
                         document.getElementById('trendSection').style.display = 'none';
                     }
 
+                    // Search Term date range is independent — computed only from
+                    // the keyword file's own dates, not the campaign file's.
+                    const kwdDates = rawKeywordRows.map(r => r.Date).filter(Boolean).sort();
+                    keywordFullDateRange.start = kwdDates.length ? kwdDates[0] : null;
+                    keywordFullDateRange.end = kwdDates.length ? kwdDates[kwdDates.length - 1] : null;
+
+                    const kDateBar = document.getElementById('keywordDateRangeBar');
+                    if (keywordFullDateRange.start && keywordFullDateRange.end) {
+                        kDateBar.style.display = 'flex';
+                        document.getElementById('kDateStart').min = keywordFullDateRange.start;
+                        document.getElementById('kDateStart').max = keywordFullDateRange.end;
+                        document.getElementById('kDateEnd').min = keywordFullDateRange.start;
+                        document.getElementById('kDateEnd').max = keywordFullDateRange.end;
+                        document.getElementById('kDateStart').value = keywordFullDateRange.start;
+                        document.getElementById('kDateEnd').value = keywordFullDateRange.end;
+                        document.getElementById('kDateRangeHint').textContent = `Showing ${keywordFullDateRange.start} to ${keywordFullDateRange.end}`;
+                    } else {
+                        kDateBar.style.display = 'none';
+                    }
+                    keywordDateRange.start = keywordFullDateRange.start;
+                    keywordDateRange.end = keywordFullDateRange.end;
+
                     runAnalysis(fullDateRange.start, fullDateRange.end);
+                    runKeywordAnalysis(keywordFullDateRange.start, keywordFullDateRange.end);
                     displayDashboard();
                     showSuccess('Analysis complete');
                     saveCurrentReport();
@@ -2246,30 +2329,6 @@
                 return { ...camp, ACOS: acos.toFixed(2), ROAS: roas.toFixed(2), CTR: ctr.toFixed(2), CVR: cvr.toFixed(2), SpendContribution: spendContribution.toFixed(2), SalesContribution: salesContribution.toFixed(2), Status: status, Action: status === 'scale' ? 'Increase' : status === 'maintain' ? 'Monitor' : status === 'reduce' ? 'Reduce' : 'Pause' };
             }).sort((a,b) => b.Spend - a.Spend);
 
-            let keywords = [];
-            if (rawKeywordRows && rawKeywordRows.length > 0) {
-                const kwdRows = rawKeywordRows.filter(r => inRange(r.Date));
-                const kwdMap = {};
-                kwdRows.forEach(r => {
-                    const key = (r.Keyword || '(Unknown Term)') + '||' + (r.Campaign || '');
-                    if (!kwdMap[key]) kwdMap[key] = { Keyword: r.Keyword || '(Unknown Term)', Campaign: r.Campaign, Spend: 0, Sales: 0, Orders: 0, Clicks: 0 };
-                    kwdMap[key].Spend += r.Spend;
-                    kwdMap[key].Sales += r.Sales;
-                    kwdMap[key].Orders += r.Orders;
-                    kwdMap[key].Clicks += r.Clicks;
-                });
-                const kwdTotalSpend = kwdRows.reduce((s,r) => s + r.Spend, 0);
-                keywords = Object.values(kwdMap).map(kwd => {
-                    const acos = kwd.Sales > 0 ? (kwd.Spend / kwd.Sales * 100) : 0;
-                    const roas = kwd.Spend > 0 ? (kwd.Sales / kwd.Spend) : 0;
-                    const cvr = kwd.Clicks > 0 ? (kwd.Orders / kwd.Clicks * 100) : 0;
-                    const spendContribution = kwdTotalSpend > 0 ? (kwd.Spend / kwdTotalSpend * 100) : 0;
-                    const salesContribution = gmvBaseline > 0 ? (kwd.Sales / gmvBaseline * 100) : 0;
-                    let status = kwd.Sales === 0 ? 'pause' : roas > 3 ? 'scale' : roas > 2 ? 'maintain' : 'reduce';
-                    return { ...kwd, ACOS: acos.toFixed(2), ROAS: roas.toFixed(2), CVR: cvr.toFixed(2), SpendContribution: spendContribution.toFixed(2), SalesContribution: salesContribution.toFixed(2), Status: status, Action: status === 'scale' ? 'Increase' : status === 'pause' ? 'Add Negative' : status === 'maintain' ? 'Monitor' : 'Reduce' };
-                }).sort((a,b) => b.Spend - a.Spend);
-            }
-
             const asinMap = {};
             campaignRows.forEach(p => {
                 if (p.ASIN) {
@@ -2301,7 +2360,97 @@
             });
             const daily = Object.values(dailyMap).sort((a,b) => a.Date.localeCompare(b.Date));
 
-            analysisData = { totals, campaigns: analyzedCampaigns, keywords, asins, daily };
+            analysisData = { totals, campaigns: analyzedCampaigns, keywords: (analysisData && analysisData.keywords) || [], asins, daily };
+        }
+
+        // Keyword (Search Term) date range — independent from the main
+        // Campaign/Products date range, since sellers often pull these two
+        // reports for different periods.
+
+        // Aggregates Search Term rows for a given date range, independent of
+        // the Campaign/Products date filter. Sales Contribution % is still
+        // measured against the overall Ad Sales baseline (gmvBaseline) so all
+        // three tabs share one consistent definition of "contribution".
+        function runKeywordAnalysis(startDate, endDate) {
+            if (!rawKeywordRows || rawKeywordRows.length === 0) {
+                if (analysisData) analysisData.keywords = [];
+                return;
+            }
+            const inRange = d => {
+                if (!d) return true;
+                if (startDate && d < startDate) return false;
+                if (endDate && d > endDate) return false;
+                return true;
+            };
+            const gmvBaseline = (analysisData && analysisData.totals && analysisData.totals.gmvBaseline) || 0;
+
+            const kwdRows = rawKeywordRows.filter(r => inRange(r.Date));
+            const kwdMap = {};
+            kwdRows.forEach(r => {
+                const key = (r.Keyword || '(Unknown Term)') + '||' + (r.Campaign || '');
+                if (!kwdMap[key]) kwdMap[key] = { Keyword: r.Keyword || '(Unknown Term)', Campaign: r.Campaign, Spend: 0, Sales: 0, Orders: 0, Clicks: 0 };
+                kwdMap[key].Spend += r.Spend;
+                kwdMap[key].Sales += r.Sales;
+                kwdMap[key].Orders += r.Orders;
+                kwdMap[key].Clicks += r.Clicks;
+            });
+            const kwdTotalSpend = kwdRows.reduce((s,r) => s + r.Spend, 0);
+            const keywords = Object.values(kwdMap).map(kwd => {
+                const acos = kwd.Sales > 0 ? (kwd.Spend / kwd.Sales * 100) : 0;
+                const roas = kwd.Spend > 0 ? (kwd.Sales / kwd.Spend) : 0;
+                const cvr = kwd.Clicks > 0 ? (kwd.Orders / kwd.Clicks * 100) : 0;
+                const spendContribution = kwdTotalSpend > 0 ? (kwd.Spend / kwdTotalSpend * 100) : 0;
+                const salesContribution = gmvBaseline > 0 ? (kwd.Sales / gmvBaseline * 100) : 0;
+                let status = kwd.Sales === 0 ? 'pause' : roas > 3 ? 'scale' : roas > 2 ? 'maintain' : 'reduce';
+                return { ...kwd, ACOS: acos.toFixed(2), ROAS: roas.toFixed(2), CVR: cvr.toFixed(2), SpendContribution: spendContribution.toFixed(2), SalesContribution: salesContribution.toFixed(2), Status: status, Action: status === 'scale' ? 'Increase' : status === 'pause' ? 'Add Negative' : status === 'maintain' ? 'Monitor' : 'Reduce' };
+            }).sort((a,b) => b.Spend - a.Spend);
+
+            if (analysisData) analysisData.keywords = keywords;
+        }
+
+        function applyKeywordDateRange() {
+            if (!rawKeywordRows) return;
+            let start = document.getElementById('kDateStart').value || null;
+            let end = document.getElementById('kDateEnd').value || null;
+            if (start && end && start > end) { showError('Search Terms: start date is after end date'); return; }
+            document.querySelectorAll('#keywordDateRangeBar .quick-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('kDateRangeHint').textContent = (start && end) ? `Showing ${start} to ${end}` : 'Showing all dates';
+            keywordDateRange.start = start;
+            keywordDateRange.end = end;
+            runKeywordAnalysis(start, end);
+            renderKeywords();
+        }
+
+        function setKeywordQuickRange(range, btnEl) {
+            if (!keywordFullDateRange.end) return;
+            document.querySelectorAll('#keywordDateRangeBar .quick-btn').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            const end = new Date(keywordFullDateRange.end);
+            let start = new Date(keywordFullDateRange.end);
+            let rangeEnd = keywordFullDateRange.end;
+            if (range === 'today') {
+                start = end;
+            } else if (range === 'yesterday') {
+                start.setDate(start.getDate() - 1);
+                end.setDate(end.getDate() - 1);
+                rangeEnd = toISODate(end);
+            } else if (range === '7d') {
+                start.setDate(start.getDate() - 6);
+            } else if (range === '30d') {
+                start.setDate(start.getDate() - 29);
+            } else if (range === 'all') {
+                start = new Date(keywordFullDateRange.start);
+                rangeEnd = keywordFullDateRange.end;
+            }
+            let rangeStart = toISODate(start);
+            if (rangeStart < keywordFullDateRange.start) rangeStart = keywordFullDateRange.start;
+            document.getElementById('kDateStart').value = rangeStart;
+            document.getElementById('kDateEnd').value = rangeEnd;
+            document.getElementById('kDateRangeHint').textContent = `Showing ${rangeStart} to ${rangeEnd}`;
+            keywordDateRange.start = rangeStart;
+            keywordDateRange.end = rangeEnd;
+            runKeywordAnalysis(rangeStart, rangeEnd);
+            renderKeywords();
         }
 
         function applyDateRange() {
@@ -2532,7 +2681,7 @@
             renderCampaigns();
         }
 
-function renderKeywords() {
+        function renderKeywords() {
             if (!analysisData.keywords.length) {
                 document.getElementById('kSummary').innerHTML = '';
                 document.querySelector('#kTable tbody').innerHTML =
@@ -2649,6 +2798,8 @@ function renderKeywords() {
             rawCampaignRows = null;
             rawKeywordRows = null;
             fullDateRange = { start: null, end: null };
+            keywordDateRange = { start: null, end: null };
+            keywordFullDateRange = { start: null, end: null };
             titleFetchInProgress = false;
             if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
             if (trendChartInstance) { trendChartInstance.destroy(); trendChartInstance = null; }
@@ -2659,6 +2810,7 @@ function renderKeywords() {
             document.getElementById('productFileName').textContent = '';
             document.getElementById('keywordFileName').textContent = '';
             document.getElementById('dateRangeBar').style.display = 'none';
+            document.getElementById('keywordDateRangeBar').style.display = 'none';
             document.getElementById('trendSection').style.display = 'none';
             const banner = document.getElementById('titleFetchBanner');
             if (banner) banner.style.display = 'none';
