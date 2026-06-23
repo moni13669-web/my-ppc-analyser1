@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PPC Analyser — Know which ASINs are burning your ad budget</title>
+<title>AdLens — See exactly where your ad money goes</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root{
@@ -66,10 +66,15 @@
     text-transform: uppercase;
   }
   .brand-mark{
-    width:8px; height:8px; border-radius:2px;
-    background: var(--gold);
-    box-shadow: 0 0 12px rgba(232,163,61,0.7);
+    width:20px; height:20px;
+    border-radius:6px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
+  .brand-mark svg{ width:12px; height:12px; }
 
   .hero-main{
     max-width: 620px;
@@ -388,13 +393,13 @@
   <!-- ============ HERO ============ -->
   <section class="hero">
     <div class="brand">
-      <span class="brand-mark"></span>
-      PPC Analyser
+      <span class="brand-mark"><svg viewBox="0 0 26 26" fill="none"><ellipse cx="13" cy="13" rx="11" ry="7" stroke="#0b1320" stroke-width="2.2" fill="none"/><circle cx="13" cy="13" r="3.5" fill="#0b1320"/><line x1="20" y1="6" x2="24" y2="2" stroke="#0b1320" stroke-width="2.2" stroke-linecap="round"/></svg></span>
+      AdLens
     </div>
 
     <div class="hero-main">
       <div class="eyebrow">Amazon Sponsored Products</div>
-      <h1>Find out which ASINs are <em>quietly losing</em> you money.</h1>
+      <h1>See exactly where your <em>ad money</em> goes.</h1>
       <p class="sub">
         Upload your Sponsored Products report. We match every ASIN to its real product title and surface the campaigns burning through spend with nothing to show for it.
       </p>
@@ -605,13 +610,16 @@
     setMsg(msg, 'Account created. Check your email to confirm, then log in.', 'success');
   });
 
-// ---------------- If already logged in, skip straight to launchpad ----------------
+  // ---------------- If already logged in, skip straight to launchpad ----------------
+  // (Redirect temporarily disabled in this preview-safe copy only.)
+  /*
   (async () => {
     const { data } = await sb.auth.getSession();
     if (data && data.session) {
       window.location.href = '/launchpad.html';
     }
   })();
+  */
 
   // ---------------- Decorative ticker clock (purely cosmetic) ----------------
   const clockEl = document.getElementById('tickerClock');
