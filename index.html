@@ -607,7 +607,7 @@
 
 // ---------------- If already logged in, skip straight to launchpad ----------------
   (async () => {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await sb.auth.getSession();
     if (data && data.session) {
       window.location.href = '/launchpad.html';
     }
