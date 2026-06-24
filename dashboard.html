@@ -852,6 +852,63 @@
             margin-bottom: 20px;
         }
 
+        .breakdown-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .breakdown-card {
+            background: var(--glass-hi);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 16px 32px -22px rgba(11, 43, 38, 0.22);
+        }
+        .breakdown-card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+        }
+        .breakdown-chart-area {
+            height: 200px;
+            position: relative;
+        }
+        .breakdown-legend {
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .breakdown-legend-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-light);
+        }
+        .breakdown-legend-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .breakdown-legend-label {
+            flex: 1;
+            color: var(--text-dark);
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .breakdown-legend-value {
+            font-family: var(--font-mono, inherit);
+            font-weight: 600;
+            color: var(--text-dark);
+            white-space: nowrap;
+        }
+
         .tabs {
             display: flex;
             border-bottom: 1px solid var(--border-color);
@@ -1244,6 +1301,7 @@
             .upload-grid { grid-template-columns: 1fr; }
             .kpi-grid { grid-template-columns: repeat(3, 1fr); }
             .summary { grid-template-columns: repeat(2, 1fr); }
+            .breakdown-grid { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 768px) {
@@ -1544,6 +1602,32 @@
                         <div class="section-title">Daily Performance Trend (Spend vs Sales)</div>
                         <div class="chart-area">
                             <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">Spend &amp; Sales Breakdown</div>
+                        <div class="breakdown-grid">
+                            <div class="breakdown-card">
+                                <div class="breakdown-card-title">Spend by Status</div>
+                                <div class="breakdown-chart-area"><canvas id="spendByStatusChart"></canvas></div>
+                                <div class="breakdown-legend" id="spendByStatusLegend"></div>
+                            </div>
+                            <div class="breakdown-card">
+                                <div class="breakdown-card-title">Sales by Status</div>
+                                <div class="breakdown-chart-area"><canvas id="salesByStatusChart"></canvas></div>
+                                <div class="breakdown-legend" id="salesByStatusLegend"></div>
+                            </div>
+                            <div class="breakdown-card">
+                                <div class="breakdown-card-title">Spend by Campaign (Top 6)</div>
+                                <div class="breakdown-chart-area"><canvas id="spendByCampaignChart"></canvas></div>
+                                <div class="breakdown-legend" id="spendByCampaignLegend"></div>
+                            </div>
+                            <div class="breakdown-card">
+                                <div class="breakdown-card-title">Sales by ASIN (Top 6)</div>
+                                <div class="breakdown-chart-area"><canvas id="salesByAsinChart"></canvas></div>
+                                <div class="breakdown-legend" id="salesByAsinLegend"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -2507,6 +2591,7 @@
             displayKPIs();
             updateChart();
             updateTrendChart();
+            updateBreakdownCharts();
             renderCampaigns();
             renderKeywords();
             renderAsins();
@@ -2652,6 +2737,132 @@
                     }
                 }
             });
+        }
+
+        // ---------------- Spend & Sales breakdown donut charts ----------------
+        let breakdownChartInstances = {};
+
+        const STATUS_COLORS = {
+            scale: '#34c759',
+            maintain: '#0071e3',
+            reduce: '#ff9500',
+            pause: '#ff3b30',
+            good: '#34c759',
+            review: '#ff9500'
+        };
+        const CATEGORICAL_COLORS = ['#0F7A6E', '#1C4E9C', '#34c759', '#ff9500', '#ff3b30', '#8e8e93'];
+
+        function renderDonut(canvasId, legendId, labels, values, colors, valueFormatter) {
+            const ctx = document.getElementById(canvasId);
+            if (breakdownChartInstances[canvasId]) breakdownChartInstances[canvasId].destroy();
+
+            const total = values.reduce((s, v) => s + v, 0);
+
+            if (!ctx || total <= 0) {
+                const legendEl = document.getElementById(legendId);
+                if (legendEl) legendEl.innerHTML = '<div class="breakdown-legend-row" style="color: var(--text-light);">No data to show</div>';
+                return;
+            }
+
+            breakdownChartInstances[canvasId] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '68%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (item) => `${item.label}: ${valueFormatter(item.raw)} (${(item.raw / total * 100).toFixed(1)}%)`
+                            }
+                        }
+                    }
+                }
+            });
+
+            const legendEl = document.getElementById(legendId);
+            if (legendEl) {
+                legendEl.innerHTML = labels.map((label, i) => `
+                    <div class="breakdown-legend-row">
+                        <span class="breakdown-legend-dot" style="background:${colors[i % colors.length]}"></span>
+                        <span class="breakdown-legend-label">${label}</span>
+                        <span class="breakdown-legend-value">${valueFormatter(values[i])}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function updateBreakdownCharts() {
+            if (!analysisData) return;
+            const { campaigns, asins } = analysisData;
+
+            // Spend / Sales by Status — fixed status order so colors stay
+            // consistent with the Scale/Maintain/Reduce/Pause flags used elsewhere.
+            const statusOrder = ['scale', 'maintain', 'reduce', 'pause'];
+            const statusLabels = { scale: 'Scale', maintain: 'Maintain', reduce: 'Reduce', pause: 'Pause' };
+
+            const spendByStatus = {};
+            const salesByStatus = {};
+            statusOrder.forEach(s => { spendByStatus[s] = 0; salesByStatus[s] = 0; });
+            campaigns.forEach(c => {
+                if (spendByStatus[c.Status] === undefined) return;
+                spendByStatus[c.Status] += c.Spend;
+                salesByStatus[c.Status] += c.Sales;
+            });
+            const presentStatuses = statusOrder.filter(s => spendByStatus[s] > 0 || salesByStatus[s] > 0);
+
+            renderDonut(
+                'spendByStatusChart', 'spendByStatusLegend',
+                presentStatuses.map(s => statusLabels[s]),
+                presentStatuses.map(s => spendByStatus[s]),
+                presentStatuses.map(s => STATUS_COLORS[s]),
+                formatNumber
+            );
+            renderDonut(
+                'salesByStatusChart', 'salesByStatusLegend',
+                presentStatuses.map(s => statusLabels[s]),
+                presentStatuses.map(s => salesByStatus[s]),
+                presentStatuses.map(s => STATUS_COLORS[s]),
+                formatNumber
+            );
+
+            // Spend by Campaign — top 6 by spend, rest grouped as "Other"
+            const topCampaigns = campaigns.slice(0, 6);
+            const otherCampaignSpend = campaigns.slice(6).reduce((s, c) => s + c.Spend, 0);
+            const campaignLabels = topCampaigns.map(c => c.Campaign.length > 22 ? c.Campaign.slice(0, 20) + '…' : c.Campaign);
+            const campaignValues = topCampaigns.map(c => c.Spend);
+            if (otherCampaignSpend > 0) {
+                campaignLabels.push('Other');
+                campaignValues.push(otherCampaignSpend);
+            }
+            renderDonut(
+                'spendByCampaignChart', 'spendByCampaignLegend',
+                campaignLabels, campaignValues, CATEGORICAL_COLORS, formatNumber
+            );
+
+            // Sales by ASIN — top 6 by sales, rest grouped as "Other"
+            const topAsins = [...asins].sort((a, b) => b.Sales - a.Sales).slice(0, 6);
+            const otherAsinSales = [...asins].sort((a, b) => b.Sales - a.Sales).slice(6).reduce((s, a) => s + a.Sales, 0);
+            const asinLabels = topAsins.map(a => (a.Title && a.Title !== 'No matching title found') ? (a.Title.length > 22 ? a.Title.slice(0, 20) + '…' : a.Title) : a.ASIN);
+            const asinValues = topAsins.map(a => a.Sales);
+            if (otherAsinSales > 0) {
+                asinLabels.push('Other');
+                asinValues.push(otherAsinSales);
+            }
+            renderDonut(
+                'salesByAsinChart', 'salesByAsinLegend',
+                asinLabels, asinValues, CATEGORICAL_COLORS, formatNumber
+            );
         }
 
         function renderCampaigns() {
@@ -2810,6 +3021,8 @@
             titleFetchInProgress = false;
             if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
             if (trendChartInstance) { trendChartInstance.destroy(); trendChartInstance = null; }
+            Object.values(breakdownChartInstances).forEach(c => { if (c) c.destroy(); });
+            breakdownChartInstances = {};
             document.getElementById('dashboard').classList.remove('show');
             document.getElementById('uploadSection').style.display = 'block';
             document.getElementById('productFile').value = '';
