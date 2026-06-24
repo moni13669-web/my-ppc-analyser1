@@ -852,18 +852,53 @@
             margin-bottom: 20px;
         }
 
+        .charts-side-by-side {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        .chart-pane{
+            min-width: 0;
+        }
+        .chart-pane-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+        }
+
         .breakdown-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
         }
         .breakdown-card {
+            position: relative;
+            overflow: hidden;
             background: var(--glass-hi);
-            backdrop-filter: blur(14px);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
             border: 1px solid var(--glass-border);
             border-radius: 18px;
             padding: 18px;
             box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 16px 32px -22px rgba(11, 43, 38, 0.22);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .breakdown-card::before{
+            content: '';
+            position: absolute;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(15, 122, 110, 0.12), transparent 70%);
+            top: -80px;
+            right: -60px;
+            pointer-events: none;
+        }
+        .breakdown-card:hover{
+            transform: translateY(-2px);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 20px 38px -18px rgba(11, 43, 38, 0.28);
         }
         .breakdown-card-title {
             font-size: 13px;
@@ -883,7 +918,7 @@
         }
         .breakdown-legend-row {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 8px;
             font-size: 12px;
             color: var(--text-light);
@@ -893,14 +928,15 @@
             height: 9px;
             border-radius: 50%;
             flex-shrink: 0;
+            margin-top: 4px;
         }
         .breakdown-legend-label {
             flex: 1;
             color: var(--text-dark);
             font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.35;
         }
         .breakdown-legend-value {
             font-family: var(--font-mono, inherit);
@@ -1302,6 +1338,7 @@
             .kpi-grid { grid-template-columns: repeat(3, 1fr); }
             .summary { grid-template-columns: repeat(2, 1fr); }
             .breakdown-grid { grid-template-columns: 1fr; }
+            .charts-side-by-side { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 768px) {
@@ -1573,35 +1610,38 @@
 
                         <div class="kpi-grid" id="kpiGrid"></div>
 
-                        <div class="chart-controls">
-                            <span class="chart-label">Metrics:</span>
-                            <label class="metric-checkbox metric-roas">
-                                <input type="checkbox" id="chkROAS" checked onchange="updateChart()">
-                                <span>ROAS</span>
-                            </label>
-                            <label class="metric-checkbox metric-acos">
-                                <input type="checkbox" id="chkACOS" checked onchange="updateChart()">
-                                <span>ACOS %</span>
-                            </label>
-                            <label class="metric-checkbox metric-spend">
-                                <input type="checkbox" id="chkSpend" checked onchange="updateChart()">
-                                <span>Spend</span>
-                            </label>
-                            <label class="metric-checkbox metric-sales">
-                                <input type="checkbox" id="chkSales" checked onchange="updateChart()">
-                                <span>Sales</span>
-                            </label>
-                        </div>
+                        <div class="charts-side-by-side">
+                            <div class="chart-pane">
+                                <div class="chart-controls">
+                                    <span class="chart-label">Metrics:</span>
+                                    <label class="metric-checkbox metric-roas">
+                                        <input type="checkbox" id="chkROAS" checked onchange="updateChart()">
+                                        <span>ROAS</span>
+                                    </label>
+                                    <label class="metric-checkbox metric-acos">
+                                        <input type="checkbox" id="chkACOS" checked onchange="updateChart()">
+                                        <span>ACOS %</span>
+                                    </label>
+                                    <label class="metric-checkbox metric-spend">
+                                        <input type="checkbox" id="chkSpend" checked onchange="updateChart()">
+                                        <span>Spend</span>
+                                    </label>
+                                    <label class="metric-checkbox metric-sales">
+                                        <input type="checkbox" id="chkSales" checked onchange="updateChart()">
+                                        <span>Sales</span>
+                                    </label>
+                                </div>
+                                <div class="chart-area">
+                                    <canvas id="performanceChart"></canvas>
+                                </div>
+                            </div>
 
-                        <div class="chart-area">
-                            <canvas id="performanceChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="section" id="trendSection" style="display:none;">
-                        <div class="section-title">Daily Performance Trend (Spend vs Sales)</div>
-                        <div class="chart-area">
-                            <canvas id="trendChart"></canvas>
+                            <div class="chart-pane" id="trendSection" style="display:none;">
+                                <div class="chart-pane-title">Daily Performance Trend (Spend vs Sales)</div>
+                                <div class="chart-area">
+                                    <canvas id="trendChart"></canvas>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2673,15 +2713,30 @@
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: top5.map(c => c.Campaign.substring(0, 12)),
+                    labels: top5.map(c => c.Campaign),
                     datasets: datasets
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { display: false } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => items[0] ? items[0].label : ''
+                            }
+                        }
+                    },
                     scales: {
+                        x: {
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 28,
+                                minRotation: 0,
+                                font: { size: 11 }
+                            }
+                        },
                         y: { type: 'linear', display: document.getElementById('chkROAS').checked, position: 'left' },
                         y1: { type: 'linear', display: document.getElementById('chkACOS').checked, position: 'left' },
                         y2: { type: 'linear', display: (document.getElementById('chkSpend').checked || document.getElementById('chkSales').checked), position: 'right', grid: { drawOnChartArea: false } }
@@ -2750,6 +2805,30 @@
         };
         const CATEGORICAL_COLORS = ['#0F7A6E', '#1C4E9C', '#34c759', '#ff9500', '#ff3b30', '#8e8e93'];
 
+        // Draws the formatted total in the empty center of a doughnut chart —
+        // a small "liquid glass dashboard" touch so the chart isn't just a
+        // ring with no headline number.
+        const donutCenterTextPlugin = {
+            id: 'donutCenterText',
+            afterDraw(chart) {
+                if (chart.config.type !== 'doughnut') return;
+                const { ctx, chartArea } = chart;
+                const centerX = (chartArea.left + chartArea.right) / 2;
+                const centerY = (chartArea.top + chartArea.bottom) / 2;
+                const totalText = chart.config._donutCenterLabel || '';
+                ctx.save();
+                ctx.font = "700 17px 'IBM Plex Mono', monospace";
+                ctx.fillStyle = '#0B2B26';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(totalText, centerX, centerY - 6);
+                ctx.font = "600 9.5px 'Inter', sans-serif";
+                ctx.fillStyle = '#4B635E';
+                ctx.fillText('TOTAL', centerX, centerY + 12);
+                ctx.restore();
+            }
+        };
+
         function renderDonut(canvasId, legendId, labels, values, colors, valueFormatter) {
             const ctx = document.getElementById(canvasId);
             if (breakdownChartInstances[canvasId]) breakdownChartInstances[canvasId].destroy();
@@ -2785,8 +2864,11 @@
                             }
                         }
                     }
-                }
+                },
+                plugins: [donutCenterTextPlugin]
             });
+            breakdownChartInstances[canvasId].config._donutCenterLabel = valueFormatter(total);
+            breakdownChartInstances[canvasId].update();
 
             const legendEl = document.getElementById(legendId);
             if (legendEl) {
@@ -2837,7 +2919,7 @@
             // Spend by Campaign — top 6 by spend, rest grouped as "Other"
             const topCampaigns = campaigns.slice(0, 6);
             const otherCampaignSpend = campaigns.slice(6).reduce((s, c) => s + c.Spend, 0);
-            const campaignLabels = topCampaigns.map(c => c.Campaign.length > 22 ? c.Campaign.slice(0, 20) + '…' : c.Campaign);
+            const campaignLabels = topCampaigns.map(c => c.Campaign);
             const campaignValues = topCampaigns.map(c => c.Spend);
             if (otherCampaignSpend > 0) {
                 campaignLabels.push('Other');
@@ -2851,7 +2933,7 @@
             // Sales by ASIN — top 6 by sales, rest grouped as "Other"
             const topAsins = [...asins].sort((a, b) => b.Sales - a.Sales).slice(0, 6);
             const otherAsinSales = [...asins].sort((a, b) => b.Sales - a.Sales).slice(6).reduce((s, a) => s + a.Sales, 0);
-            const asinLabels = topAsins.map(a => (a.Title && a.Title !== 'No matching title found') ? (a.Title.length > 22 ? a.Title.slice(0, 20) + '…' : a.Title) : a.ASIN);
+            const asinLabels = topAsins.map(a => (a.Title && a.Title !== 'No matching title found') ? a.Title : a.ASIN);
             const asinValues = topAsins.map(a => a.Sales);
             if (otherAsinSales > 0) {
                 asinLabels.push('Other');
