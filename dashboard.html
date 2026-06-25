@@ -80,6 +80,8 @@
         }
 
         .header {
+            position: relative;
+            z-index: 80;
             background: rgba(255, 255, 255, 0.45);
             backdrop-filter: blur(24px) saturate(180%);
             -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -2213,17 +2215,25 @@
         }
 
         // ---- Automatic ASIN -> Title resolution ----
-        // Title lookups now go through our own Vercel serverless backend
+        // Title lookups go through our own Vercel serverless backend
         // (api/index.py), which fetches the Amazon product page directly and
         // extracts the title server-side. No third-party CORS proxies, no
         // client-side HTML parsing — the frontend just asks the backend for
         // a title and gets back a clean string or null.
-        const TITLE_FETCH_CONCURRENCY = 2;
+        const TITLE_FETCH_CONCURRENCY = 15;
         const TITLE_FETCH_TIMEOUT_MS = 12000;
-        const TITLE_FETCH_BATCH_SIZE = 15;   // ASINs per wave
-        const TITLE_FETCH_BATCH_PAUSE_MS = 1500; // pause between waves so we don't hammer our own backend / Amazon
+        const TITLE_MAX_ATTEMPTS = 30;
 
         function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        // Escalating retry delay: fast at first (most transient blocks clear
+        // quickly), slowing down the longer an ASIN keeps failing, so we're
+        // not hammering Amazon indefinitely on a genuinely stuck ASIN.
+        function retryDelayForAttempt(attempt) {
+            if (attempt <= 5) return 500 + Math.random() * 1000;        // 0.5–1.5s
+            if (attempt <= 20) return 1000 + Math.random() * 2000;      // 1–3s
+            return 2000 + Math.random() * 3000;                        // 2–5s
+        }
 
         async function fetchWithTimeout(url, ms) {
             const controller = new AbortController();
@@ -2235,10 +2245,10 @@
             }
         }
 
-        // Calls our own backend at /api/fetch-title/{asin}. Returns the title
+        // Single request attempt against our backend. Returns the title
         // string on success, or null on any failure (network error, non-200,
         // or the backend reporting it couldn't find a title).
-        async function fetchAsinTitle(asin) {
+        async function fetchAsinTitleOnce(asin) {
             try {
                 const res = await fetchWithTimeout(`/api/fetch-title/${asin}`, TITLE_FETCH_TIMEOUT_MS);
                 if (!res.ok) return null;
@@ -2250,38 +2260,49 @@
             }
         }
 
-        // Resolve titles for a list of ASINs with limited concurrency, processed in
-        // small waves with a pause between each — large batches (50+) are much less
-        // likely to get rate-limited (by our own backend or by Amazon) this way than
-        // firing every request in one continuous stream.
+        // Keeps retrying ONE ASIN on its own independent schedule, up to
+        // TITLE_MAX_ATTEMPTS times, with escalating delay between attempts.
+        // This runs as its own self-contained loop so a slow/stuck ASIN
+        // never blocks or delays any other ASIN's attempts.
+        async function fetchAsinTitle(asin) {
+            for (let attempt = 1; attempt <= TITLE_MAX_ATTEMPTS; attempt++) {
+                const title = await fetchAsinTitleOnce(asin);
+                if (title) return title;
+                if (attempt < TITLE_MAX_ATTEMPTS) {
+                    await sleep(retryDelayForAttempt(attempt));
+                }
+            }
+            return null;
+        }
+
+        // Resolves titles for a list of ASINs. Every ASIN's fetch+retry loop
+        // is launched immediately and runs independently and concurrently
+        // (bounded by TITLE_FETCH_CONCURRENCY workers) — a failing ASIN keeps
+        // retrying on its own schedule in the background rather than holding
+        // up a separate "retry batch" pass after everything else finishes.
         async function resolveTitlesForAsins(asins, onProgress) {
             const pending = asins.filter(a => a && !catalogData[a]);
             let done = 0;
             const total = pending.length;
             if (total === 0) { if (onProgress) onProgress(0, 0); return; }
 
-            for (let i = 0; i < pending.length; i += TITLE_FETCH_BATCH_SIZE) {
-                const batch = pending.slice(i, i + TITLE_FETCH_BATCH_SIZE);
-                let cursor = 0;
-                async function worker() {
-                    while (cursor < batch.length) {
-                        const asin = batch[cursor++];
-                        const title = await fetchAsinTitle(asin);
-                        catalogData[asin] = title || 'No matching title found';
-                        done++;
-                        if (onProgress) onProgress(done, total);
-                    }
-                }
-                const workers = Array.from({ length: Math.min(TITLE_FETCH_CONCURRENCY, batch.length) }, worker);
-                await Promise.all(workers);
-                if (i + TITLE_FETCH_BATCH_SIZE < pending.length) {
-                    await sleep(TITLE_FETCH_BATCH_PAUSE_MS);
+            let cursor = 0;
+            async function worker() {
+                while (cursor < pending.length) {
+                    const asin = pending[cursor++];
+                    const title = await fetchAsinTitle(asin);
+                    catalogData[asin] = title || 'No matching title found';
+                    done++;
+                    if (onProgress) onProgress(done, total);
                 }
             }
+            const workers = Array.from({ length: Math.min(TITLE_FETCH_CONCURRENCY, pending.length) }, worker);
+            await Promise.all(workers);
         }
 
-        // Re-attempts only the ASINs that previously failed ("No matching title found"),
-        // exposed as a manual retry button since transient proxy/Amazon failures are common.
+        // Re-attempts only the ASINs that previously exhausted all 30 retries,
+        // exposed as a manual button for the rare case something is still
+        // stuck after the automatic escalating retries gave up.
         async function retryFailedTitles(onProgress) {
             const failed = Object.keys(catalogData).filter(asin => catalogData[asin] === 'No matching title found');
             failed.forEach(asin => delete catalogData[asin]);
