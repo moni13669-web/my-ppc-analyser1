@@ -105,9 +105,36 @@
             letter-spacing: -0.2px;
         }
 
-        .header-location {
+        .marketplace-select-wrap{
+            position: relative;
+        }
+        .marketplace-select{
+            appearance: none;
+            -webkit-appearance: none;
+            background: var(--glass-hi);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 7px 30px 7px 12px;
             font-size: 12px;
-            color: var(--text-light);
+            font-weight: 500;
+            color: var(--text-dark);
+            cursor: pointer;
+            outline: none;
+            max-width: 200px;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234B635E' stroke-width='2' stroke-linecap='round'><polyline points='6 9 12 15 18 9'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 14px;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .marketplace-select:hover{
+            border-color: var(--accent);
+            background-color: rgba(255,255,255,0.85);
+        }
+        .marketplace-select:focus-visible{
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
         }
 
         .header-right {
@@ -870,8 +897,8 @@
 
         .breakdown-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
         }
         .breakdown-card {
             position: relative;
@@ -880,20 +907,20 @@
             backdrop-filter: blur(16px) saturate(180%);
             -webkit-backdrop-filter: blur(16px) saturate(180%);
             border: 1px solid var(--glass-border);
-            border-radius: 18px;
-            padding: 18px;
+            border-radius: 16px;
+            padding: 14px;
             box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 16px 32px -22px rgba(11, 43, 38, 0.22);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .breakdown-card::before{
             content: '';
             position: absolute;
-            width: 160px;
-            height: 160px;
+            width: 110px;
+            height: 110px;
             border-radius: 50%;
             background: radial-gradient(circle, rgba(15, 122, 110, 0.12), transparent 70%);
-            top: -80px;
-            right: -60px;
+            top: -55px;
+            right: -40px;
             pointer-events: none;
         }
         .breakdown-card:hover{
@@ -901,26 +928,28 @@
             box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 20px 38px -18px rgba(11, 43, 38, 0.28);
         }
         .breakdown-card-title {
-            font-size: 13px;
+            font-size: 11.5px;
             font-weight: 700;
             color: var(--text-dark);
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
         .breakdown-chart-area {
-            height: 200px;
+            height: 130px;
             position: relative;
         }
         .breakdown-legend {
-            margin-top: 14px;
+            margin-top: 10px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 5px;
+            max-height: 110px;
+            overflow-y: auto;
         }
         .breakdown-legend-row {
             display: flex;
             align-items: flex-start;
-            gap: 8px;
-            font-size: 12px;
+            gap: 6px;
+            font-size: 11px;
             color: var(--text-light);
         }
         .breakdown-legend-dot {
@@ -1337,16 +1366,17 @@
             .upload-grid { grid-template-columns: 1fr; }
             .kpi-grid { grid-template-columns: repeat(3, 1fr); }
             .summary { grid-template-columns: repeat(2, 1fr); }
-            .breakdown-grid { grid-template-columns: 1fr; }
+            .breakdown-grid { grid-template-columns: repeat(2, 1fr); }
             .charts-side-by-side { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 768px) {
             .content { padding: 20px; }
             .kpi-grid { grid-template-columns: 1fr; }
+            .breakdown-grid { grid-template-columns: 1fr; }
             .header { padding: 14px 18px; }
             .header-title { font-size: 13px; }
-            .header-location { display: none; }
+            .marketplace-select { max-width: 120px; font-size: 11px; padding: 6px 24px 6px 10px; }
             .modal-box { padding: 22px; max-height: 90vh; }
             .modal-title { font-size: 17px; }
             .side-drawer { width: 250px; }
@@ -1391,7 +1421,20 @@
                     </button>
                     <div class="header-title">AdLens</div>
                 </div>
-                <div class="header-location">India</div>
+                <div class="marketplace-select-wrap">
+                    <select id="marketplaceSelect" class="marketplace-select" onchange="handleMarketplaceChange()">
+                        <option value="IN">🇮🇳 Amazon.in — ₹ INR</option>
+                        <option value="US">🇺🇸 Amazon.com — $ USD</option>
+                        <option value="UK">🇬🇧 Amazon.co.uk — £ GBP</option>
+                        <option value="DE">🇩🇪 Amazon.de — € EUR</option>
+                        <option value="AE">🇦🇪 Amazon.ae — د.إ AED</option>
+                        <option value="CA">🇨🇦 Amazon.ca — $ CAD</option>
+                        <option value="AU">🇦🇺 Amazon.com.au — $ AUD</option>
+                        <option value="JP">🇯🇵 Amazon.co.jp — ¥ JPY</option>
+                        <option value="SG">🇸🇬 Amazon.sg — $ SGD</option>
+                        <option value="MX">🇲🇽 Amazon.com.mx — $ MXN</option>
+                    </select>
+                </div>
             </div>
 
             <!-- ===== Left slide-out drawer ===== -->
@@ -2227,11 +2270,50 @@
             return `${y}-${m}-${day}`;
         }
 
+        // ---------------- Marketplace / currency ----------------
+        const MARKETPLACE_CURRENCY = {
+            IN: { symbol: '₹', indianFormat: true },
+            US: { symbol: '$', indianFormat: false },
+            UK: { symbol: '£', indianFormat: false },
+            DE: { symbol: '€', indianFormat: false },
+            AE: { symbol: 'د.إ', indianFormat: false },
+            CA: { symbol: '$', indianFormat: false },
+            AU: { symbol: '$', indianFormat: false },
+            JP: { symbol: '¥', indianFormat: false },
+            SG: { symbol: '$', indianFormat: false },
+            MX: { symbol: '$', indianFormat: false }
+        };
+        let currentMarketplace = 'IN';
+
+        function handleMarketplaceChange() {
+            currentMarketplace = document.getElementById('marketplaceSelect').value;
+            // Re-render anything currently on screen so the new currency symbol
+            // and number format (Indian Cr/L vs international B/M/K) take effect
+            // immediately, without needing to re-upload or re-analyze.
+            if (analysisData) {
+                displayKPIs();
+                updateChart();
+                updateTrendChart();
+                updateBreakdownCharts();
+                renderCampaigns();
+                renderKeywords();
+                renderAsins();
+            }
+        }
+
         function formatNumber(num) {
-            if (num >= 10000000) return (num / 10000000).toFixed(1) + 'Cr';
-            if (num >= 100000) return (num / 100000).toFixed(1) + 'L';
-            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-            return num.toFixed(0);
+            const cfg = MARKETPLACE_CURRENCY[currentMarketplace] || MARKETPLACE_CURRENCY.IN;
+            const symbol = cfg.symbol;
+            if (cfg.indianFormat) {
+                if (num >= 10000000) return symbol + (num / 10000000).toFixed(1) + 'Cr';
+                if (num >= 100000) return symbol + (num / 100000).toFixed(1) + 'L';
+                if (num >= 1000) return symbol + (num / 1000).toFixed(1) + 'K';
+                return symbol + num.toFixed(0);
+            }
+            if (num >= 1000000000) return symbol + (num / 1000000000).toFixed(1) + 'B';
+            if (num >= 1000000) return symbol + (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return symbol + (num / 1000).toFixed(1) + 'K';
+            return symbol + num.toFixed(0);
         }
 
         function analyzeData() {
@@ -2710,10 +2792,12 @@
             }
             const ctx = document.getElementById('performanceChart');
             if (chartInstance) chartInstance.destroy();
+            const fullCampaignNames = top5.map(c => c.Campaign);
+            const shortCampaignNames = top5.map(c => c.Campaign.length > 14 ? c.Campaign.slice(0, 13) + '…' : c.Campaign);
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: top5.map(c => c.Campaign),
+                    labels: shortCampaignNames,
                     datasets: datasets
                 },
                 options: {
@@ -2724,7 +2808,7 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                title: (items) => items[0] ? items[0].label : ''
+                                title: (items) => items[0] ? fullCampaignNames[items[0].dataIndex] : ''
                             }
                         }
                     },
@@ -2732,13 +2816,13 @@
                         x: {
                             ticks: {
                                 autoSkip: false,
-                                maxRotation: 28,
+                                maxRotation: 0,
                                 minRotation: 0,
                                 font: { size: 11 }
                             }
                         },
                         y: { type: 'linear', display: document.getElementById('chkROAS').checked, position: 'left' },
-                        y1: { type: 'linear', display: document.getElementById('chkACOS').checked, position: 'left' },
+                        y1: { type: 'linear', display: document.getElementById('chkACOS').checked, position: 'left', ticks: { display: false }, grid: { drawOnChartArea: false, drawTicks: false }, border: { display: false } },
                         y2: { type: 'linear', display: (document.getElementById('chkSpend').checked || document.getElementById('chkSales').checked), position: 'right', grid: { drawOnChartArea: false } }
                     }
                 }
@@ -2817,14 +2901,14 @@
                 const centerY = (chartArea.top + chartArea.bottom) / 2;
                 const totalText = chart.config._donutCenterLabel || '';
                 ctx.save();
-                ctx.font = "700 17px 'IBM Plex Mono', monospace";
+                ctx.font = "700 13px 'IBM Plex Mono', monospace";
                 ctx.fillStyle = '#0B2B26';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(totalText, centerX, centerY - 6);
-                ctx.font = "600 9.5px 'Inter', sans-serif";
+                ctx.fillText(totalText, centerX, centerY - 5);
+                ctx.font = "600 8px 'Inter', sans-serif";
                 ctx.fillStyle = '#4B635E';
-                ctx.fillText('TOTAL', centerX, centerY + 12);
+                ctx.fillText('TOTAL', centerX, centerY + 9);
                 ctx.restore();
             }
         };
