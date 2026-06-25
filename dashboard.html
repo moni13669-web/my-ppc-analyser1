@@ -1423,16 +1423,16 @@
                 </div>
                 <div class="marketplace-select-wrap">
                     <select id="marketplaceSelect" class="marketplace-select" onchange="handleMarketplaceChange()">
-                        <option value="IN">🇮🇳 Amazon.in — ₹ INR</option>
-                        <option value="US">🇺🇸 Amazon.com — $ USD</option>
-                        <option value="UK">🇬🇧 Amazon.co.uk — £ GBP</option>
-                        <option value="DE">🇩🇪 Amazon.de — € EUR</option>
-                        <option value="AE">🇦🇪 Amazon.ae — د.إ AED</option>
-                        <option value="CA">🇨🇦 Amazon.ca — $ CAD</option>
-                        <option value="AU">🇦🇺 Amazon.com.au — $ AUD</option>
-                        <option value="JP">🇯🇵 Amazon.co.jp — ¥ JPY</option>
-                        <option value="SG">🇸🇬 Amazon.sg — $ SGD</option>
-                        <option value="MX">🇲🇽 Amazon.com.mx — $ MXN</option>
+                        <option value="IN">🇮🇳 Amazon.in — INR</option>
+                        <option value="US">🇺🇸 Amazon.com — USD</option>
+                        <option value="UK">🇬🇧 Amazon.co.uk — GBP</option>
+                        <option value="DE">🇩🇪 Amazon.de — EUR</option>
+                        <option value="AE">🇦🇪 Amazon.ae — AED</option>
+                        <option value="CA">🇨🇦 Amazon.ca — CAD</option>
+                        <option value="AU">🇦🇺 Amazon.com.au — AUD</option>
+                        <option value="JP">🇯🇵 Amazon.co.jp — JPY</option>
+                        <option value="SG">🇸🇬 Amazon.sg — SGD</option>
+                        <option value="MX">🇲🇽 Amazon.com.mx — MXN</option>
                     </select>
                 </div>
             </div>
@@ -1627,8 +1627,6 @@
                 </div>
 
                 <div class="dashboard" id="dashboard">
-                    <div class="title">Performance</div>
-
                     <div class="section">
                         <div class="section-title">Campaign Analytics</div>
 
@@ -2316,6 +2314,23 @@
             return symbol + num.toFixed(0);
         }
 
+        // For plain counts (impressions, clicks, orders) that are NOT currency
+        // values — same Indian Cr/L vs international B/M/K logic, but with no
+        // currency symbol prefix.
+        function formatCount(num) {
+            const cfg = MARKETPLACE_CURRENCY[currentMarketplace] || MARKETPLACE_CURRENCY.IN;
+            if (cfg.indianFormat) {
+                if (num >= 10000000) return (num / 10000000).toFixed(1) + 'Cr';
+                if (num >= 100000) return (num / 100000).toFixed(1) + 'L';
+                if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                return num.toFixed(0);
+            }
+            if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toFixed(0);
+        }
+
         function analyzeData() {
             if (!productData) { showError('Upload campaigns file'); return; }
             document.getElementById('loading').classList.add('show');
@@ -2733,7 +2748,7 @@
                 <div class="kpi-card kpi-roas"><div class="kpi-icon">${icon('roas')}</div><div class="kpi-body"><div class="kpi-label">ROAS</div><div class="kpi-value">${totals.roas.toFixed(2)}<span class="kpi-unit">x</span></div></div></div>
                 <div class="kpi-card kpi-cost"><div class="kpi-icon">${icon('cost')}</div><div class="kpi-body"><div class="kpi-label">Total Spend</div><div class="kpi-value">${formatNumber(totals.spend)}</div></div></div>
                 <div class="kpi-card kpi-acos"><div class="kpi-icon">${icon('acos')}</div><div class="kpi-body"><div class="kpi-label">ACOS</div><div class="kpi-value">${totals.acos.toFixed(2)}<span class="kpi-unit">%</span></div></div></div>
-                <div class="kpi-card kpi-impressions"><div class="kpi-icon">${icon('impressions')}</div><div class="kpi-body"><div class="kpi-label">Impressions</div><div class="kpi-value">${formatNumber(totals.impressions)}</div></div></div>
+                <div class="kpi-card kpi-impressions"><div class="kpi-icon">${icon('impressions')}</div><div class="kpi-body"><div class="kpi-label">Impressions</div><div class="kpi-value">${formatCount(totals.impressions)}</div></div></div>
             `;
             document.getElementById('kpiGrid').innerHTML = html;
         }
@@ -3036,7 +3051,7 @@
             const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
             const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
             const subtotalCTR = total.impressions > 0 ? (total.clicks / total.impressions * 100) : 0;
-            document.getElementById('cSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Campaigns</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Impressions</div><div class="summary-value">${formatNumber(total.impressions)}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">CTR %</div><div class="summary-value">${subtotalCTR.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div>`;
+            document.getElementById('cSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Campaigns</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Impressions</div><div class="summary-value">${formatCount(total.impressions)}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatCount(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">CTR %</div><div class="summary-value">${subtotalCTR.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div>`;
             document.querySelector('#cTable tbody').innerHTML = rows;
         }
 
@@ -3051,7 +3066,7 @@
             const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
             const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
             const subtotalCTR = total.impressions > 0 ? (total.clicks / total.impressions * 100) : 0;
-            document.getElementById('cSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Campaigns</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Impressions</div><div class="summary-value">${formatNumber(total.impressions)}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">CTR %</div><div class="summary-value">${subtotalCTR.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div>`;
+            document.getElementById('cSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Campaigns</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Impressions</div><div class="summary-value">${formatCount(total.impressions)}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatCount(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">CTR %</div><div class="summary-value">${subtotalCTR.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div>`;
             document.querySelector('#cTable tbody').innerHTML = rows;
         }
 
@@ -3078,7 +3093,7 @@
             const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
             const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
             const subtotalCVR = total.clicks > 0 ? (total.orders / total.clicks * 100) : 0;
-            document.getElementById('kSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Keywords</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
+            document.getElementById('kSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Keywords</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatCount(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
             document.querySelector('#kTable tbody').innerHTML = rows;
         }
 
@@ -3093,7 +3108,7 @@
             const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
             const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
             const subtotalCVR = total.clicks > 0 ? (total.orders / total.clicks * 100) : 0;
-            document.getElementById('kSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Keywords</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
+            document.getElementById('kSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Keywords</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatCount(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
             document.querySelector('#kTable tbody').innerHTML = rows;
         }
 
@@ -3112,7 +3127,7 @@
             const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
             const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
             const subtotalCVR = total.clicks > 0 ? (total.orders / total.clicks * 100) : 0;
-            document.getElementById('aSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Products</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
+            document.getElementById('aSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Products</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatCount(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
             document.querySelector('#aTable tbody').innerHTML = rows;
         }
 
@@ -3127,7 +3142,7 @@
             const subtotalACOS = total.sales > 0 ? (total.spend / total.sales * 100) : 0;
             const subtotalROAS = total.spend > 0 ? (total.sales / total.spend) : 0;
             const subtotalCVR = total.clicks > 0 ? (total.orders / total.clicks * 100) : 0;
-            document.getElementById('aSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Products</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatNumber(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
+            document.getElementById('aSummary').innerHTML = `<div class="summary-item"><div class="summary-label">Products</div><div class="summary-value">${filtered.length}</div></div><div class="summary-item"><div class="summary-label">Sales</div><div class="summary-value">${formatNumber(total.sales)}</div></div><div class="summary-item"><div class="summary-label">Orders</div><div class="summary-value">${total.orders}</div></div><div class="summary-item"><div class="summary-label">Clicks</div><div class="summary-value">${formatCount(total.clicks)}</div></div><div class="summary-item"><div class="summary-label">Spend</div><div class="summary-value">${formatNumber(total.spend)}</div></div><div class="summary-item"><div class="summary-label">ACOS %</div><div class="summary-value">${subtotalACOS.toFixed(2)}%</div></div><div class="summary-item"><div class="summary-label">ROAS</div><div class="summary-value">${subtotalROAS.toFixed(2)}x</div></div><div class="summary-item"><div class="summary-label">CVR %</div><div class="summary-value">${subtotalCVR.toFixed(2)}%</div></div>`;
             document.querySelector('#aTable tbody').innerHTML = rows;
         }
 
