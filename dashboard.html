@@ -105,36 +105,105 @@
             letter-spacing: -0.2px;
         }
 
-        .marketplace-select-wrap{
+        .marketplace-wrap{
             position: relative;
         }
-        .marketplace-select{
-            appearance: none;
-            -webkit-appearance: none;
+        .marketplace-btn{
+            display: flex;
+            align-items: center;
+            gap: 8px;
             background: var(--glass-hi);
             backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border);
-            border-radius: 10px;
-            padding: 7px 30px 7px 12px;
-            font-size: 12px;
-            font-weight: 500;
+            border-radius: 999px;
+            padding: 7px 12px 7px 8px;
+            font-size: 12.5px;
+            font-weight: 600;
             color: var(--text-dark);
             cursor: pointer;
-            outline: none;
-            max-width: 200px;
-            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234B635E' stroke-width='2' stroke-linecap='round'><polyline points='6 9 12 15 18 9'/></svg>");
-            background-repeat: no-repeat;
-            background-position: right 8px center;
-            background-size: 14px;
             transition: border-color 0.15s, background 0.15s;
         }
-        .marketplace-select:hover{
+        .marketplace-btn:hover{
             border-color: var(--accent);
-            background-color: rgba(255,255,255,0.85);
+            background: rgba(255,255,255,0.85);
         }
-        .marketplace-select:focus-visible{
+        .marketplace-btn:focus-visible{
             outline: 2px solid var(--accent);
             outline-offset: 2px;
+        }
+        .mp-flag{
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 1px rgba(11,43,38,0.08);
+        }
+        .mp-flag svg{ width: 100%; height: 100%; display: block; }
+        .mp-label{ white-space: nowrap; }
+        .mp-chevron{
+            color: var(--text-light);
+            transition: transform 0.15s;
+            flex-shrink: 0;
+        }
+        .marketplace-wrap.open .mp-chevron{ transform: rotate(180deg); }
+
+        .marketplace-menu{
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 220px;
+            max-height: 320px;
+            overflow-y: auto;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 24px 50px -20px rgba(11, 43, 38, 0.35);
+            padding: 6px;
+            display: none;
+            z-index: 60;
+        }
+        .marketplace-wrap.open .marketplace-menu{ display: block; }
+
+        .mp-item{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            border: none;
+            background: transparent;
+            text-align: left;
+            padding: 9px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .mp-item:hover{ background: rgba(28, 78, 156, 0.08); }
+        .mp-item.active{ background: rgba(15, 122, 110, 0.1); }
+        .mp-item-flag{
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 1px rgba(11,43,38,0.08);
+        }
+        .mp-item-flag svg{ width: 100%; height: 100%; display: block; }
+        .mp-item-text{
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .mp-item-name{
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        .mp-item-currency{
+            font-size: 11px;
+            color: var(--text-light);
         }
 
         .header-right {
@@ -1376,7 +1445,8 @@
             .breakdown-grid { grid-template-columns: 1fr; }
             .header { padding: 14px 18px; }
             .header-title { font-size: 13px; }
-            .marketplace-select { max-width: 120px; font-size: 11px; padding: 6px 24px 6px 10px; }
+            .marketplace-btn .mp-label { display: none; }
+            .marketplace-btn { padding: 6px 10px 6px 6px; }
             .modal-box { padding: 22px; max-height: 90vh; }
             .modal-title { font-size: 17px; }
             .side-drawer { width: 250px; }
@@ -1421,19 +1491,13 @@
                     </button>
                     <div class="header-title">AdLens</div>
                 </div>
-                <div class="marketplace-select-wrap">
-                    <select id="marketplaceSelect" class="marketplace-select" onchange="handleMarketplaceChange()">
-                        <option value="IN">🇮🇳 Amazon.in — INR</option>
-                        <option value="US">🇺🇸 Amazon.com — USD</option>
-                        <option value="UK">🇬🇧 Amazon.co.uk — GBP</option>
-                        <option value="DE">🇩🇪 Amazon.de — EUR</option>
-                        <option value="AE">🇦🇪 Amazon.ae — AED</option>
-                        <option value="CA">🇨🇦 Amazon.ca — CAD</option>
-                        <option value="AU">🇦🇺 Amazon.com.au — AUD</option>
-                        <option value="JP">🇯🇵 Amazon.co.jp — JPY</option>
-                        <option value="SG">🇸🇬 Amazon.sg — SGD</option>
-                        <option value="MX">🇲🇽 Amazon.com.mx — MXN</option>
-                    </select>
+                <div class="marketplace-wrap" id="marketplaceWrap">
+                    <button class="marketplace-btn" id="marketplaceBtn" aria-haspopup="true" aria-expanded="false">
+                        <span class="mp-flag" id="mpFlagCurrent"></span>
+                        <span class="mp-label" id="mpLabelCurrent">Amazon.in</span>
+                        <svg class="mp-chevron" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="marketplace-menu" id="marketplaceMenu"></div>
                 </div>
             </div>
 
@@ -2269,22 +2333,64 @@
         }
 
         // ---------------- Marketplace / currency ----------------
-        const MARKETPLACE_CURRENCY = {
-            IN: { symbol: '₹', indianFormat: true },
-            US: { symbol: '$', indianFormat: false },
-            UK: { symbol: '£', indianFormat: false },
-            DE: { symbol: '€', indianFormat: false },
-            AE: { symbol: 'د.إ', indianFormat: false },
-            CA: { symbol: '$', indianFormat: false },
-            AU: { symbol: '$', indianFormat: false },
-            JP: { symbol: '¥', indianFormat: false },
-            SG: { symbol: '$', indianFormat: false },
-            MX: { symbol: '$', indianFormat: false }
+        // Simplified flag SVGs (flat stripe/shape representations) so flags
+        // render crisply at any size without depending on emoji font support,
+        // which varies a lot across OS/browsers for native <select> options.
+        const MARKETPLACES = {
+            IN: { name: 'Amazon.in', currency: 'INR', symbol: '₹', indianFormat: true,
+                flag: '<svg viewBox="0 0 24 24"><rect width="24" height="8" y="0" fill="#FF9933"/><rect width="24" height="8" y="8" fill="#fff"/><rect width="24" height="8" y="16" fill="#138808"/><circle cx="12" cy="12" r="3" fill="none" stroke="#000080" stroke-width="0.6"/></svg>' },
+            US: { name: 'Amazon.com', currency: 'USD', symbol: '$', indianFormat: false,
+                flag: '<svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#fff"/><rect width="24" height="1.85" y="0" fill="#B22234"/><rect width="24" height="1.85" y="3.7" fill="#B22234"/><rect width="24" height="1.85" y="7.4" fill="#B22234"/><rect width="24" height="1.85" y="11.1" fill="#B22234"/><rect width="24" height="1.85" y="14.8" fill="#B22234"/><rect width="24" height="1.85" y="18.5" fill="#B22234"/><rect width="24" height="1.85" y="22.2" fill="#B22234"/><rect width="11" height="13" fill="#3C3B6E"/></svg>' },
+            UK: { name: 'Amazon.co.uk', currency: 'GBP', symbol: '£', indianFormat: false,
+                flag: '<svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#00247d"/><path d="M0 0L24 24M24 0L0 24" stroke="#fff" stroke-width="3"/><path d="M0 0L24 24M24 0L0 24" stroke="#cf142b" stroke-width="1.2"/><rect x="9.5" width="5" height="24" fill="#fff"/><rect y="9.5" width="24" height="5" fill="#fff"/><rect x="10.5" width="3" height="24" fill="#cf142b"/><rect y="10.5" width="24" height="3" fill="#cf142b"/></svg>' },
+            DE: { name: 'Amazon.de', currency: 'EUR', symbol: '€', indianFormat: false,
+                flag: '<svg viewBox="0 0 24 24"><rect width="24" height="8" y="0" fill="#000"/><rect width="24" height="8" y="8" fill="#DD0000"/><rect width="24" height="8" y="16" fill="#FFCE00"/></svg>' },
+            AE: { name: 'Amazon.ae', currency: 'AED', symbol: 'AED ', indianFormat: false,
+                flag: '<svg viewBox="0 0 24 24"><rect width="24" height="8" y="0" fill="#00732F"/><rect width="24" height="8" y="8" fill="#fff"/><rect width="24" height="8" y="16" fill="#000"/><rect width="7" height="24" x="0" fill="#FF0000"/></svg>' },
+            CA: { name: 'Amazon.ca', currency: 'CAD', symbol: '$', indianFormat: false,
+                flag: '<svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#fff"/><rect width="6" height="24" x="0" fill="#FF0000"/><rect width="6" height="24" x="18" fill="#FF0000"/><path d="M12 6l1.2 2.6 2.6-1-0.8 2.7 2.4 1.2-2.6 1 0.5 2.7-2.6-1-0.7 2.8-0.7-2.8-2.6 1 0.5-2.7-2.6-1 2.4-1.2-0.8-2.7 2.6 1z" fill="#FF0000"/></svg>' },
+            AU: { name: 'Amazon.com.au', currency: 'AUD', symbol: '$', indianFormat: false,
+                flag: '<svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#00008B"/><rect width="11" height="11" fill="#00008B"/><path d="M0 0L11 11M11 0L0 11" stroke="#fff" stroke-width="1.3"/><circle cx="17" cy="6" r="1.3" fill="#fff"/><circle cx="20" cy="11" r="1.3" fill="#fff"/><circle cx="14" cy="14" r="1" fill="#fff"/><circle cx="19" cy="17" r="1.3" fill="#fff"/><circle cx="15" cy="19" r="1" fill="#fff"/></svg>' },
+            JP: { name: 'Amazon.co.jp', currency: 'JPY', symbol: '¥', indianFormat: false,
+                flag: '<svg viewBox="0 0 24 24"><rect width="24" height="24" fill="#fff"/><circle cx="12" cy="12" r="6" fill="#BC002D"/></svg>' },
+            SG: { name: 'Amazon.sg', currency: 'SGD', symbol: '$', indianFormat: false,
+                flag: '<svg viewBox="0 0 24 24"><rect width="24" height="12" y="0" fill="#ED2939"/><rect width="24" height="12" y="12" fill="#fff"/><circle cx="6" cy="6" r="3" fill="#fff"/><circle cx="7" cy="6" r="2.4" fill="#ED2939"/></svg>' },
+            MX: { name: 'Amazon.com.mx', currency: 'MXN', symbol: '$', indianFormat: false,
+                flag: '<svg viewBox="0 0 24 24"><rect width="8" height="24" x="0" fill="#006847"/><rect width="8" height="24" x="8" fill="#fff"/><rect width="8" height="24" x="16" fill="#CE1126"/></svg>' }
         };
+        // Backwards-compatible alias used by formatNumber/formatCount.
+        const MARKETPLACE_CURRENCY = MARKETPLACES;
         let currentMarketplace = 'IN';
 
-        function handleMarketplaceChange() {
-            currentMarketplace = document.getElementById('marketplaceSelect').value;
+        function renderMarketplaceMenu() {
+            const menu = document.getElementById('marketplaceMenu');
+            menu.innerHTML = Object.entries(MARKETPLACES).map(([code, mp]) => `
+                <button type="button" class="mp-item ${code === currentMarketplace ? 'active' : ''}" data-mp="${code}">
+                    <span class="mp-item-flag">${mp.flag}</span>
+                    <span class="mp-item-text">
+                        <span class="mp-item-name">${mp.name}</span>
+                        <span class="mp-item-currency">${mp.currency}</span>
+                    </span>
+                </button>
+            `).join('');
+            menu.querySelectorAll('.mp-item').forEach(btn => {
+                btn.addEventListener('click', () => selectMarketplace(btn.getAttribute('data-mp')));
+            });
+        }
+
+        function updateMarketplaceButton() {
+            const mp = MARKETPLACES[currentMarketplace];
+            document.getElementById('mpFlagCurrent').innerHTML = mp.flag;
+            document.getElementById('mpLabelCurrent').textContent = mp.name;
+        }
+
+        function selectMarketplace(code) {
+            currentMarketplace = code;
+            updateMarketplaceButton();
+            renderMarketplaceMenu();
+            document.getElementById('marketplaceWrap').classList.remove('open');
+            document.getElementById('marketplaceBtn').setAttribute('aria-expanded', 'false');
+
             // Re-render anything currently on screen so the new currency symbol
             // and number format (Indian Cr/L vs international B/M/K) take effect
             // immediately, without needing to re-upload or re-analyze.
@@ -2298,6 +2404,22 @@
                 renderAsins();
             }
         }
+
+        (function initMarketplaceDropdown() {
+            updateMarketplaceButton();
+            renderMarketplaceMenu();
+            const wrap = document.getElementById('marketplaceWrap');
+            const btn = document.getElementById('marketplaceBtn');
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = wrap.classList.toggle('open');
+                btn.setAttribute('aria-expanded', isOpen);
+            });
+            document.addEventListener('click', () => {
+                wrap.classList.remove('open');
+                btn.setAttribute('aria-expanded', 'false');
+            });
+        })();
 
         function formatNumber(num) {
             const cfg = MARKETPLACE_CURRENCY[currentMarketplace] || MARKETPLACE_CURRENCY.IN;
@@ -2738,7 +2860,7 @@
             const icons = {
                 roas: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline>',
                 cost: '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line>',
-                sales: '<path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path>',
+                sales: '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v10"></path><path d="M9 9.5c0-1.4 1.3-2.5 3-2.5s3 1.1 3 2.5c0 3-6 1.5-6 4.5 0 1.4 1.3 2.5 3 2.5s3-1.1 3-2.5"></path>',
                 acos: '<line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle>',
                 impressions: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'
             };
