@@ -1445,6 +1445,115 @@
             transition: width 0.3s ease;
         }
 
+        /* Compact inline version shown only inside the Products tab, instead
+           of a persistent banner at the top of the whole page. */
+        .title-fetch-banner-inline {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--glass-hi);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 9px 14px;
+            margin-bottom: 14px;
+            font-size: 12px;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+        .title-fetch-track-inline {
+            flex: 1;
+            max-width: 160px;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(11, 43, 38, 0.08);
+            overflow: hidden;
+            margin-left: 6px;
+        }
+        .title-fetch-track-inline .title-fetch-fill {
+            height: 100%;
+        }
+
+        /* Corner toast notification — fades in, holds briefly, fades out. */
+        .toast-notification {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--glass-hi);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 12px 18px;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.85) inset, 0 20px 40px -16px rgba(11, 43, 38, 0.35);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+            opacity: 0;
+            transform: translateY(8px);
+            pointer-events: none;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast-notification .toast-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--teal, #0F7A6E), var(--blue, #1C4E9C));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .toast-notification .toast-icon svg { width: 10px; height: 10px; }
+
+        /* Confirm-style callout shown when Download Report is clicked while
+           titles are still fetching. */
+        .download-confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 43, 38, 0.4);
+            backdrop-filter: blur(3px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 150;
+            padding: 20px;
+        }
+        .download-confirm-overlay.show { display: flex; }
+        .download-confirm-box {
+            background: #fff;
+            border-radius: 18px;
+            max-width: 380px;
+            width: 100%;
+            padding: 26px;
+            box-shadow: 0 40px 80px -30px rgba(11, 43, 38, 0.45);
+        }
+        .download-confirm-box h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+        .download-confirm-box p {
+            font-size: 13.5px;
+            color: var(--text-light);
+            line-height: 1.55;
+            margin-bottom: 18px;
+        }
+        .download-confirm-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .download-confirm-actions .btn { flex: 1; }
+
         @media (max-width: 1024px) {
             .upload-grid { grid-template-columns: 1fr; }
             .kpi-grid { grid-template-columns: repeat(3, 1fr); }
@@ -1559,6 +1668,24 @@
 
             <!-- ===== About modal ===== -->
             <!-- ===== Settings modal ===== -->
+            <!-- ===== Toast notification (title-fetch completion) ===== -->
+            <div class="toast-notification" id="titleFetchToast">
+                <span class="toast-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                <span id="titleFetchToastText">Product titles fetched</span>
+            </div>
+
+            <!-- ===== Download confirm overlay (shown if titles still fetching) ===== -->
+            <div class="download-confirm-overlay" id="downloadConfirmOverlay">
+                <div class="download-confirm-box">
+                    <h4>Titles are still loading</h4>
+                    <p>We're still fetching some product titles. You can download now (the report will use ASIN codes for any titles not yet found), or wait until fetching finishes for a complete report.</p>
+                    <div class="download-confirm-actions">
+                        <button class="btn btn-secondary" id="downloadConfirmWaitBtn">Wait</button>
+                        <button class="btn btn-primary" id="downloadConfirmAnywayBtn">Download anyway</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="modal-overlay" id="settingsModal">
                 <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
                     <div class="modal-header">
@@ -1665,19 +1792,6 @@
             <div class="content">
                 <div class="message" id="successMsg"></div>
                 <div class="message" id="errorMsg"></div>
-                <div class="title-fetch-banner" id="titleFetchBanner" style="display:none;">
-                    <div class="title-fetch-row">
-                        <span class="title-fetch-spinner" aria-hidden="true"></span>
-                        <span id="titleFetchLabel">Fetching product titles…</span>
-                    </div>
-                    <div class="title-fetch-track"><div class="title-fetch-fill" id="titleFetchFill"></div></div>
-                </div>
-                <div class="title-fetch-banner" id="titleRetryBanner" style="display:none;">
-                    <div class="title-fetch-row" style="margin-bottom:0; justify-content: space-between;">
-                        <span id="titleRetryLabel">Some titles could not be found.</span>
-                        <button class="filter-btn" onclick="handleRetryTitles()" id="titleRetryBtn" style="white-space:nowrap;">Retry failed titles</button>
-                    </div>
-                </div>
 
                 <div class="upload-section" id="uploadSection">
                     <div class="upload-intro">
@@ -1823,7 +1937,7 @@
                     </div>
 
                     <div class="actions">
-                        <button class="btn btn-primary" onclick="downloadExcelReport()">Download Report</button>
+                        <button class="btn btn-primary" onclick="handleDownloadClick()">Download Report</button>
                         <button class="btn btn-secondary" onclick="resetDashboard()">New Analysis</button>
                     </div>
 
@@ -1960,6 +2074,15 @@
                         </div>
 
                         <div id="asins" class="tab-content">
+                            <div class="title-fetch-banner-inline" id="titleFetchBanner" style="display:none;">
+                                <span class="title-fetch-spinner" aria-hidden="true"></span>
+                                <span id="titleFetchLabel">Fetching product titles…</span>
+                                <div class="title-fetch-track-inline"><div class="title-fetch-fill" id="titleFetchFill"></div></div>
+                            </div>
+                            <div class="title-fetch-banner-inline" id="titleRetryBanner" style="display:none;">
+                                <span id="titleRetryLabel">Some titles could not be found.</span>
+                                <button class="filter-btn" onclick="handleRetryTitles()" id="titleRetryBtn" style="white-space:nowrap; margin-left:auto;">Retry failed titles</button>
+                            </div>
                             <div class="filter-section">
                                 <div class="filter-label">Filter</div>
                                 <div class="filter-group">
@@ -2049,7 +2172,7 @@
         // a saved report was handed off from the launchpad ("Open this report"),
         // loads it straight into the dashboard instead of showing the upload step.
         async function initAuthAndMaybeReopen() {
-            const { data: sessionData } = await sb.auth.getSession();
+  const { data: sessionData } = await sb.auth.getSession();
             if (!sessionData || !sessionData.session) {
                 window.location.href = '/index.html';
                 return;
@@ -2709,6 +2832,19 @@
             }
         }
 
+        // Shows the corner toast for a few seconds with a fade in/out, used
+        // for the "titles fetched" completion notice instead of a persistent banner.
+        let toastTimeoutId = null;
+        function showToast(text, durationMs = 3200) {
+            const toast = document.getElementById('titleFetchToast');
+            const textEl = document.getElementById('titleFetchToastText');
+            if (!toast || !textEl) return;
+            textEl.textContent = text;
+            toast.classList.add('show');
+            if (toastTimeoutId) clearTimeout(toastTimeoutId);
+            toastTimeoutId = setTimeout(() => toast.classList.remove('show'), durationMs);
+        }
+
         function fetchProductTitles() {
             if (!rawCampaignRows || titleFetchInProgress) return;
             const uniqueAsins = [...new Set(rawCampaignRows.map(r => r.ASIN).filter(Boolean))];
@@ -2734,6 +2870,7 @@
                 if (banner) banner.style.display = 'none';
                 updateRetryBanner();
                 saveCurrentReport();
+                showToast('Product titles fetched');
             }).catch(() => {
                 titleFetchInProgress = false;
                 if (banner) banner.style.display = 'none';
@@ -3429,6 +3566,26 @@
             document.getElementById(tab).classList.add('active');
         }
 
+        // Gate for the Download Report button: if titles are still actively
+        // fetching, show a callout letting the user choose to wait or
+        // download anyway (with ASIN codes standing in for any titles not
+        // yet resolved), instead of silently downloading an incomplete report.
+        function handleDownloadClick() {
+            if (titleFetchInProgress) {
+                document.getElementById('downloadConfirmOverlay').classList.add('show');
+                return;
+            }
+            downloadExcelReport();
+        }
+
+        document.getElementById('downloadConfirmWaitBtn').addEventListener('click', () => {
+            document.getElementById('downloadConfirmOverlay').classList.remove('show');
+        });
+        document.getElementById('downloadConfirmAnywayBtn').addEventListener('click', () => {
+            document.getElementById('downloadConfirmOverlay').classList.remove('show');
+            downloadExcelReport();
+        });
+
         function downloadExcelReport() {
             if (!analysisData) return;
             const wb = XLSX.utils.book_new();
@@ -3484,6 +3641,10 @@
             if (banner) banner.style.display = 'none';
             const retryBanner = document.getElementById('titleRetryBanner');
             if (retryBanner) retryBanner.style.display = 'none';
+            const toast = document.getElementById('titleFetchToast');
+            if (toast) toast.classList.remove('show');
+            const downloadOverlay = document.getElementById('downloadConfirmOverlay');
+            if (downloadOverlay) downloadOverlay.classList.remove('show');
         }
 
         function showSuccess(msg) {
