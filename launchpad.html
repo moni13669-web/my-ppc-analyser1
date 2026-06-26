@@ -380,7 +380,14 @@
     throw new Error('Supabase JS library failed to load.');
   }
 
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storage: window.localStorage
+    }
+  });
 
   const REPORT_FRESH_DAYS = 7;
 
@@ -470,6 +477,25 @@
     });
   }
 
+  function usernameFromEmail(email){
+    if (!email) return 'there';
+    return email.split('@')[0];
+  }
+
+  async function ensureProfileExists(user){
+    if (!user) return usernameFromEmail(user && user.email);
+    const { data: existing } = await sb.from('profiles').select('username').eq('user_id', user.id).maybeSingle();
+    if (existing && existing.username) return existing.username;
+
+    let pendingName = '';
+    try { pendingName = localStorage.getItem('adlens_pending_username') || ''; } catch (e) {}
+    const username = pendingName || usernameFromEmail(user.email);
+
+    await sb.from('profiles').upsert({ user_id: user.id, username, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    try { localStorage.removeItem('adlens_pending_username'); } catch (e) {}
+    return username;
+  }
+
   async function init(){
     document.getElementById('loadingStage').style.display = 'none';
     document.getElementById('stage').style.display = 'block';
@@ -480,8 +506,8 @@
     const { data: sessionData } = await sb.auth.getSession();
     const user = sessionData.session.user;
     document.getElementById('userEmail').textContent = user.email || '';
-    const firstName = (user.email || '').split('@')[0];
-    document.getElementById('greeting').innerHTML = `Welcome back, <span class="grad">${escapeHtml(firstName)}</span>`;
+    const username = await ensureProfileExists(user);
+    document.getElementById('greeting').innerHTML = `Welcome back, <span class="grad">${escapeHtml(username)}</span>`;
 
     const { data: reportRow, error } = await sb
       .from('user_reports')
