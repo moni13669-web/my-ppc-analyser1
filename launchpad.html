@@ -497,13 +497,12 @@
   }
 
   async function init(){
-    document.getElementById('loadingStage').style.display = 'none';
-    document.getElementById('stage').style.display = 'block';
-    document.getElementById('userEmail').textContent = 'preview@example.com';
-    document.getElementById('greeting').innerHTML = 'Welcome back, <span class="grad">preview</span>';
-    renderEmptyState();
-    return;
     const { data: sessionData } = await sb.auth.getSession();
+    if (!sessionData || !sessionData.session) {
+      window.location.href = '/index.html';
+      return;
+    }
+
     const user = sessionData.session.user;
     document.getElementById('userEmail').textContent = user.email || '';
     const username = await ensureProfileExists(user);
