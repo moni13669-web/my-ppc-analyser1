@@ -107,6 +107,18 @@
             letter-spacing: -0.2px;
         }
 
+        .header-right-group{
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .header-username{
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+            white-space: nowrap;
+        }
+
         .marketplace-wrap{
             position: relative;
         }
@@ -1448,6 +1460,7 @@
             .header { padding: 14px 18px; }
             .header-title { font-size: 13px; }
             .marketplace-btn .mp-label { display: none; }
+            .header-username { display: none; }
             .marketplace-btn { padding: 6px 10px 6px 6px; }
             .modal-box { padding: 22px; max-height: 90vh; }
             .modal-title { font-size: 17px; }
@@ -1493,13 +1506,16 @@
                     </button>
                     <div class="header-title">AdLens</div>
                 </div>
-                <div class="marketplace-wrap" id="marketplaceWrap">
+                <div class="header-right-group">
+                    <div class="header-username" id="headerUsername"></div>
+                    <div class="marketplace-wrap" id="marketplaceWrap">
                     <button class="marketplace-btn" id="marketplaceBtn" aria-haspopup="true" aria-expanded="false">
                         <span class="mp-flag" id="mpFlagCurrent"></span>
                         <span class="mp-label" id="mpLabelCurrent">Amazon.in</span>
                         <svg class="mp-chevron" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </button>
                     <div class="marketplace-menu" id="marketplaceMenu"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1516,6 +1532,10 @@
                     </button>
                 </div>
                 <nav class="drawer-nav">
+                    <button class="drawer-item" id="menuSettingsBtn">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Settings
+                    </button>
                     <button class="drawer-item" id="menuAboutBtn">
                         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                         About this product
@@ -1538,6 +1558,30 @@
 
 
             <!-- ===== About modal ===== -->
+            <!-- ===== Settings modal ===== -->
+            <div class="modal-overlay" id="settingsModal">
+                <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+                    <div class="modal-header">
+                        <div class="modal-title" id="settingsModalTitle">Settings</div>
+                        <button class="modal-close" data-close-modal="settingsModal" aria-label="Close">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <h4>Username</h4>
+                        <p style="margin-bottom:10px;">This is the name shown in your greeting, the dashboard header, and on any feedback you send.</p>
+                        <input type="text" id="settingsUsernameInput" class="feedback-textarea" style="min-height:auto; padding:11px 13px;" maxlength="40" placeholder="Your name">
+                        <div class="feedback-status" id="settingsStatus"></div>
+                        <div class="feedback-submit-row">
+                            <button class="btn btn-primary" id="settingsSaveBtn">Save</button>
+                        </div>
+
+                        <h4 style="margin-top:26px;">Account</h4>
+                        <p id="settingsEmailDisplay" style="margin-bottom:0;"></p>
+                    </div>
+                </div>
+            </div>
+
             <div class="modal-overlay" id="aboutModal">
                 <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="aboutModalTitle">
                     <div class="modal-header">
@@ -1989,20 +2033,36 @@
             document.body.innerHTML = '<div style="padding:48px;font-family:sans-serif;">Couldn\'t load required scripts. Please refresh.</div>';
             throw new Error('Supabase JS library failed to load.');
         }
-        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true,
+                storage: window.localStorage
+            }
+        });
 
         let currentUserId = null;
+        let sessionUserEmail = null;
 
         // Runs before anything else: confirms the visitor is logged in, and if
         // a saved report was handed off from the launchpad ("Open this report"),
         // loads it straight into the dashboard instead of showing the upload step.
         async function initAuthAndMaybeReopen() {
+            currentUserId = 'preview-user';
+            sessionUserEmail = 'preview@example.com';
+            currentUsername = 'preview';
+            const headerEl = document.getElementById('headerUsername');
+            if (headerEl) headerEl.textContent = currentUsername;
+            return;
             const { data: sessionData } = await sb.auth.getSession();
             if (!sessionData || !sessionData.session) {
                 window.location.href = '/index.html';
                 return;
             }
             currentUserId = sessionData.session.user.id;
+            sessionUserEmail = sessionData.session.user.email || '';
+            loadAndDisplayUsername(sessionData.session.user);
 
             const params = new URLSearchParams(window.location.search);
             if (params.get('reopen') === '1') {
@@ -2081,12 +2141,84 @@
             document.getElementById(id).classList.remove('show');
         }
 
+        document.getElementById('menuSettingsBtn').addEventListener('click', () => { closeDrawer(); openSettingsModal(); });
         document.getElementById('menuAboutBtn').addEventListener('click', () => { closeDrawer(); openModal('aboutModal'); });
         document.getElementById('menuHowToBtn').addEventListener('click', () => { closeDrawer(); openModal('howToModal'); });
         document.getElementById('menuFeedbackBtn').addEventListener('click', () => { closeDrawer(); openModal('feedbackModal'); });
         document.getElementById('menuLogoutBtn').addEventListener('click', async () => {
             await sb.auth.signOut();
             window.location.href = '/index.html';
+        });
+
+        // ---------------- Username / Settings ----------------
+        let currentUsername = '';
+
+        function usernameFromEmail(email){
+            if (!email) return 'there';
+            return email.split('@')[0];
+        }
+
+        // Loads (or creates, if missing) the current user's profile, updates
+        // the header display, and caches the username for reuse elsewhere
+        // (e.g. feedback submissions) without an extra round trip.
+        async function loadAndDisplayUsername(user){
+            if (!user) return;
+            const { data: existing } = await sb.from('profiles').select('username').eq('user_id', user.id).maybeSingle();
+
+            if (existing && existing.username) {
+                currentUsername = existing.username;
+            } else {
+                let pendingName = '';
+                try { pendingName = localStorage.getItem('adlens_pending_username') || ''; } catch (e) {}
+                currentUsername = pendingName || usernameFromEmail(user.email);
+                await sb.from('profiles').upsert({ user_id: user.id, username: currentUsername, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+                try { localStorage.removeItem('adlens_pending_username'); } catch (e) {}
+            }
+
+            const headerEl = document.getElementById('headerUsername');
+            if (headerEl) headerEl.textContent = currentUsername;
+        }
+
+        function openSettingsModal(){
+            document.getElementById('settingsUsernameInput').value = currentUsername;
+            document.getElementById('settingsEmailDisplay').textContent = (sessionUserEmail || '');
+            document.getElementById('settingsStatus').className = 'feedback-status';
+            openModal('settingsModal');
+        }
+
+        document.getElementById('settingsSaveBtn').addEventListener('click', async () => {
+            const newName = document.getElementById('settingsUsernameInput').value.trim();
+            const statusEl = document.getElementById('settingsStatus');
+            if (!newName) {
+                statusEl.textContent = 'Username cannot be empty.';
+                statusEl.className = 'feedback-status show error';
+                return;
+            }
+            if (!currentUserId) return;
+
+            const saveBtn = document.getElementById('settingsSaveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving…';
+
+            const { error } = await sb.from('profiles').upsert(
+                { user_id: currentUserId, username: newName, updated_at: new Date().toISOString() },
+                { onConflict: 'user_id' }
+            );
+
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save';
+
+            if (error) {
+                statusEl.textContent = 'Could not save. Please try again.';
+                statusEl.className = 'feedback-status show error';
+                return;
+            }
+
+            currentUsername = newName;
+            const headerEl = document.getElementById('headerUsername');
+            if (headerEl) headerEl.textContent = currentUsername;
+            statusEl.textContent = 'Saved.';
+            statusEl.className = 'feedback-status show success';
         });
 
         document.querySelectorAll('[data-close-modal]').forEach(btn => {
@@ -2136,7 +2268,7 @@
             try {
                 const { error } = await sb
                     .from('feedback')
-                    .insert({ user_id: currentUserId, message: message.slice(0, FEEDBACK_MAX_LEN) });
+                    .insert({ user_id: currentUserId, username: currentUsername, message: message.slice(0, FEEDBACK_MAX_LEN) });
 
                 if (error) {
                     feedbackStatus.textContent = 'Could not send feedback. Please try again.';
