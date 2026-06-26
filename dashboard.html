@@ -2049,12 +2049,6 @@
         // a saved report was handed off from the launchpad ("Open this report"),
         // loads it straight into the dashboard instead of showing the upload step.
         async function initAuthAndMaybeReopen() {
-            currentUserId = 'preview-user';
-            sessionUserEmail = 'preview@example.com';
-            currentUsername = 'preview';
-            const headerEl = document.getElementById('headerUsername');
-            if (headerEl) headerEl.textContent = currentUsername;
-            return;
             const { data: sessionData } = await sb.auth.getSession();
             if (!sessionData || !sessionData.session) {
                 window.location.href = '/index.html';
