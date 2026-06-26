@@ -629,6 +629,10 @@
 
         <form id="formSignup">
           <div class="field">
+            <label for="signupUsername">Username <span style="font-weight:400; color:#a39d8a;">(optional)</span></label>
+            <input type="text" id="signupUsername" autocomplete="nickname" maxlength="40" placeholder="How should we address you?">
+          </div>
+          <div class="field">
             <label for="signupEmail">Email</label>
             <input type="email" id="signupEmail" autocomplete="email" required>
           </div>
@@ -674,7 +678,14 @@
     throw new Error('Supabase JS library failed to load.');
   }
 
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storage: window.localStorage
+    }
+  });
 
   // ---------------- Tab switching ----------------
   const tabLogin = document.getElementById('tabLogin');
@@ -722,7 +733,7 @@
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
 
-    const { error } = await sb.auth.signInWithPassword({ email, password });
+    const { error, data } = await sb.auth.signInWithPassword({ email, password });
 
     btn.disabled = false;
     btn.textContent = 'Log in';
@@ -731,6 +742,7 @@
       setMsg(msg, error.message, 'error');
       return;
     }
+    if (data && data.user) await ensureProfileExists(data.user);
     window.location.href = '/launchpad.html';
   });
 
@@ -786,6 +798,7 @@
 
     const email = document.getElementById('signupEmail').value.trim();
     const password = document.getElementById('signupPassword').value;
+    const chosenUsername = document.getElementById('signupUsername').value.trim();
 
     const { error } = await sb.auth.signUp({ email, password });
 
@@ -796,6 +809,16 @@
       setMsg(msg, error.message, 'error');
       return;
     }
+
+    // Email confirmation is required before a session exists, so we can't
+    // create the profiles row yet (RLS needs a real logged-in user). Stash
+    // the chosen username locally; the first successful login picks it up
+    // and creates the profile then. If they never typed one, this stays
+    // empty and login falls back to an email-derived name automatically.
+    if (chosenUsername) {
+      try { localStorage.setItem('adlens_pending_username', chosenUsername); } catch (e) {}
+    }
+
     setMsg(msg, 'Account created. Check your email to confirm, then log in.', 'success');
   });
 
@@ -833,6 +856,31 @@
     setTimeout(() => { window.location.href = '/launchpad.html'; }, 1200);
   });
 
+  // ---------------- Profile / username helper ----------------
+  // Derives a fallback username from an email address: "john.doe@gmail.com" -> "john.doe"
+  function usernameFromEmail(email){
+    if (!email) return 'there';
+    return email.split('@')[0];
+  }
+
+  // Creates the profiles row the first time we see a logged-in user who
+  // doesn't have one yet — using their chosen signup name if one was saved,
+  // otherwise an email-derived fallback. Safe to call repeatedly; it's a
+  // no-op once a profile already exists.
+  async function ensureProfileExists(user){
+    if (!user) return;
+    const { data: existing } = await sb.from('profiles').select('user_id').eq('user_id', user.id).maybeSingle();
+    if (existing) return;
+
+    let pendingName = '';
+    try { pendingName = localStorage.getItem('adlens_pending_username') || ''; } catch (e) {}
+    const username = pendingName || usernameFromEmail(user.email);
+
+    await sb.from('profiles').upsert({ user_id: user.id, username, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+
+    try { localStorage.removeItem('adlens_pending_username'); } catch (e) {}
+  }
+
   // ---------------- If already logged in, skip straight to launchpad ----------------
   // (Redirect disabled in this preview-safe copy only.)
   /*
@@ -841,6 +889,7 @@
     if (inRecoveryMode) return;
     const { data } = await sb.auth.getSession();
     if (data && data.session) {
+      await ensureProfileExists(data.session.user);
       window.location.href = '/launchpad.html';
     }
   })();
